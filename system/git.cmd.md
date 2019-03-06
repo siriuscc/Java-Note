@@ -38,10 +38,16 @@ git checkout -b 新分支名称
 git branch 新分支名称  	# 建立新分支
 git checkout 新分支名称 # 切换到新分支： 
 git checkout -b xiaoY origin/
-
-
 ```
 
+
+### 关联远程仓库
+
+```bash
+git remote add origin https://github.com/siriuscc/aaa.git
+
+git push -u origin master
+```
 
 
 ### 合并分支：
