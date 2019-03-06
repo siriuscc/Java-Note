@@ -41,6 +41,13 @@ git checkout -b xiaoY origin/
 ```
 
 
+```bash
+# 删除无用文件，从索引区删除，本地不会删除
+git rm -r --cache  .assets
+# 删除文件夹， 本地会删除
+git rm -r 我的文件夹/
+```
+
 ### 关联远程仓库
 
 ```bash
