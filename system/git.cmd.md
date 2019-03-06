@@ -28,8 +28,9 @@ git checkout -t origin/2.0.0
 
 git remote rm other
 
-查看当前状态
 ```bash
+#
+查看当前状态
 git status
 
 git checkout -b 新分支名称
