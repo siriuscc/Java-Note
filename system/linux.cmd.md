@@ -39,6 +39,19 @@ lsof -i tcp:80
 ```
 
 
+### linux 命令
+
+free
+
+
+du
+df
+tail
+
+
+
+
+
 
 ### ls
 

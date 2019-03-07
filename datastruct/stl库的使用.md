@@ -3,10 +3,7 @@
 
 ```cpp
 #include<stack>
-
 using namespace std;
-
-
 
 // 创建-不需要初始化
 stack<TreeNode *>  stk;
