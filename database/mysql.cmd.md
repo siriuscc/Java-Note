@@ -55,12 +55,19 @@ SELECT name FROM TableA UNION ALL SELECT name FROM TableB
 
 
 
+### sql时间
 
 sql 时间比较：
 ```sql
 
 -- 日期格式化
 select date_format(now(),'%Y-%m-%d');
+
+-- timestamp 转bigInt
+select UNIX_TIMESTAMP('2019-03-07 18:00:00');
+
+-- bigInt 转timestamp
+select FROM_UNIXTIME(1551952800);
 
 ```
 
@@ -123,23 +130,18 @@ select count(uid),(case
 
 ```
 
-表结构： 充值流水表：(coin,create_at,money,uid)
-
-查看某天 充值前十的用户uid
-查询各个金额段的充值人数
 
 
+
+
+### timestamp 和datatime
 
 TIMESTAMP和DATETIME的相同点：
 
-1> 两者都可用来表示YYYY-MM-DD HH:MM:SS[.fraction]类型的日期。
-
-
++ 两者都可用来表示YYYY-MM-DD HH:MM:SS[.fraction]类型的日期。
 
 TIMESTAMP和DATETIME的不同点：
 
-1> 两者的存储方式不一样
-
++ 两者的存储方式不一样
 对于TIMESTAMP，它把客户端插入的时间从当前时区转化为UTC（世界标准时间）进行存储。查询时，将其又转化为客户端当前时区进行返回。
-
 而对于DATETIME，不做任何改变，基本上是原样输入和输出。
