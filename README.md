@@ -68,7 +68,7 @@
 
 
 
-### 跨域问题
+
 
 
 ### java 的基本数据类的底层存储
@@ -129,6 +129,54 @@ Java 虚拟机直接支持 `boolean 类型的数组`，虚拟机的 newarray 指
 
 
 原文：https://blog.csdn.net/u010235716/article/details/79074598 
+
+
+
+
+
+
+
+Linux,Java 线程进程消失
+
+
+可能的原因：
+
++ OutOfMemoryError 
+
+
+
+
+-XX:+HeapDumpOnOutOfMemoryError  内存溢出的时候dump内存，定期jmap记录一下内存情况也是有必要的
+
+
+增加JVM参数 -XX:+HeapDumpOnOutOfMemoryError 让他在内存溢出的时候dump内存，定期jmap记录一下内存情况也是有必要的
+
+增加 ulimit -c unlimited 如果是jdk崩溃的话，也会有core文件在
+
+
+至于程序方面，关键地方还是要搞搞日志，即使是nohup也最好把输出流和错误流重定向到其他文件。更好的做法使用log4j之内的日志框架而不是System.out
+
+
+
+-Xms\<n>: 内存池的初始化值（）
+
+-Xmx\<n>： 内存池的最大值（maximum）
+
+
+-Xssn：Set thread stack size.
+
+
+
+
+
+
+
+TCP保证数据的有效性
+
+
+MySQL 建表
+
+
 
 
 
