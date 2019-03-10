@@ -1,10 +1,9 @@
-# linux 常用命令
 
 [TOC]
 
 
 
-### lsof
+## lsof
 
 可以列出被进程所打开的文件的信息。被打开的文件可以是
 
@@ -39,23 +38,109 @@ lsof -i tcp:80
 ```
 
 
-### linux 命令
-
-free
-
-
-du
-df
-tail
 
 
 
 
 
+## 磁盘相关
 
-### ls
+### df :磁盘占用情况
+linux中df命令的功能是用来检查linux服务器的文件系统的`磁盘空间占用情况`。
 
-###硬链接和软链接
+```bash
+$: df
+Filesystem     1K-blocks     Used Available Use% Mounted on
+/dev/vda1       20510332 10349984   9111824  54% /
+udev               10240        0     10240   0% /dev
+tmpfs             204888    24864    180024  13% /run
+tmpfs             512212        0    512212   0% /dev/shm
+tmpfs               5120        0      5120   0% /run/lock
+tmpfs             512212        0    512212   0% /sys/fs/cgroup
+```
+
+
+df -h 和df -i的区别是什么？同样是显示磁盘使用情况，为什么显示占用百分比相差甚远？
+
++ df -h   是去删除比较大无用的文件-----------大文件占用大量的磁盘容量。
++ df -i    则去删除数量过多的小文件-----------过多的文件占用了大量的inode号。
+
+
+### du：指定文件或目录占用磁盘空间大小
+
+Linux du命令也是查看使用空间的，但是与df命令不同的是Linux du命令是`查看当前指定文件或目录(会递归显示子目录)占用磁盘空间大小`，还是和df命令有一些区别的。
+
+
+-a或-all  显示目录中个别文件的大小。   
+
+```bash
+$: du
+404     ./.rpmdb
+4       ./.subversion/auth/svn.ssl.server
+4       ./.subversion/auth/svn.ssl.client-passphrase
+8       ./.subversion/auth/svn.simple
+4       ./.subversion/auth/svn.username
+24      ./.subversion/auth
+56      ./.subversion
+16      ./redis-3.0.6/tests/assets
+```
+
+
+
+
+
+
+
+## tail
+
+将指定的文件的`最后部分`输出到标准设备，通常是终端，通俗讲来，就是把某个档案文件的最后几行显示到终端上，假设该档案有更新，tail会`自动刷新`，确保你看到最新的档案内容。
+
+显示filename最后20行。
+tail -n 20 filename 
+
+监视filename文件的尾部内容（默认10行，相当于增加参数 -n 10），刷新显示在屏幕上。退出，按下CTRL+C
+
+tail -f 
+
+```bash
+$: tail -f song.siriuscloud.cc.access.log
+117.136.32.84 - - [10/Mar/2019:20:47:19 +0800] "GET /js/jquery.ext.js HTTP/1.1" 200 2478 "http://song.siriuscloud.cc/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36" "-"
+117.136.32.84 - - [10/Mar/2019:20:47:22 +0800] "GET /favicon.ico HTTP/1.1" 200 9662 "http://song.siriuscloud.cc/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36" "-"
+117.136.32.84 - - [10/Mar/2019:20:55:02 +0800] "GET / HTTP/1.1" 304 0 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36" "-"
+
+...
+```
+
+## 内存
+
+### free： 显示内存占用情况
+
+free 命令显示系统内存的使用情况，包括物理内存、交换内存(swap)和内核缓冲区内存。
+
+有时我们需要持续的观察内存的状况，此时可以使用 -s 选项并指定间隔的秒数：free -h -s 3
+
+
+```bash
+$: free
+             total       used       free     shared    buffers     cached
+Mem:       1024428     950188      74240      32620     126992     135432
+-/+ buffers/cache:     687764     336664
+
+```
+
+**buffer** 在操作系统中指 buffer cache， 中文一般翻译为 "缓冲区"。要理解缓冲区，必须明确另外两个概念："扇区" 和 "块"。扇区是设备的最小寻址单元，也叫 "硬扇区" 或 "设备块"。`块`是操作系统中文件系统的最小寻址单元，也叫 "文件块" 或 "I/O 块"。每个块包含一个或多个`扇区`，但大小不能超过一个页面，所以一个页可以容纳一个或多个内存中的`块`。当一个`块`被调入内存时，它要存储在一个`缓冲区`中。每个缓冲区与一个块对应，它相当于是磁盘块在内存中的表示(下图来自互联网)：
+
+![](.images/linux常用命令/2019-03-10-21-03-46.png)
++ 扇区是物理最小寻址单元
++ 块是操作系统（逻辑）最小寻址单元
++ 每个`块`包含一个或多个`扇区`
++ 一个`页`可以容纳多个`块`
+
+
+
+
+
+## ls：列出文件列表
 
 ```bash
 >ls -al
@@ -85,7 +170,7 @@ rwx=0x111,二进制表示
 9位权限，每三位分别是：user：group：other
 
 
-###ps
+## ps： 打印进程信息
 
 列出所有进程
 
@@ -156,7 +241,7 @@ chmod 对象 +/- 模式
 
 
 
-### 压缩和解压缩 tar
+## tar：压缩和解压缩 
 
 + c: create 创建归档文件
 + z: gzip 使用gzip方式对文件压缩或解压缩
@@ -177,7 +262,7 @@ tar -zxf test.tar.gz  -C /tmp
 
 
 
-###ln
+## ln：链接
 
 #### 硬链接和软链接
 ```bash
