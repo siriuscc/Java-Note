@@ -1,4 +1,7 @@
 
+
+
+### 全局命令
 ``` sql
 
 -- 查看最大连接数
@@ -25,8 +28,9 @@ show variables like '%slow_query_log%'
 set global slow_query_log=1;
 
 ```
+### 数据库常用的操作
 
-
+增删改查，手写
 
 ### SQL JOINS
 
@@ -133,15 +137,3 @@ select count(uid),(case
 
 
 
-
-### timestamp 和datatime
-
-TIMESTAMP和DATETIME的相同点：
-
-+ 两者都可用来表示YYYY-MM-DD HH:MM:SS[.fraction]类型的日期。
-
-TIMESTAMP和DATETIME的不同点：
-
-+ 两者的存储方式不一样
-对于TIMESTAMP，它把客户端插入的时间从当前时区转化为UTC（世界标准时间）进行存储。查询时，将其又转化为客户端当前时区进行返回。
-而对于DATETIME，不做任何改变，基本上是原样输入和输出。
