@@ -1,16 +1,16 @@
 
-一个Java 攻城狮的笔记本
+> 技术债，总是要还的
+
+
+
+一个Java 攻城狮的笔记
 ----
 
 
-
-本库：
-主要涉及java，数据结构，算法，前端，数据库的相关知识。
-补充面试的相关知识。
+涉及Java，数据结构，算法，前端，数据库的相关知识，补充面试的相关知识。
 
 
-
-待定任务：
+### 待定任务：
 
 - [ ] 移位运算
 - [ ] 内网穿透原理
@@ -42,7 +42,7 @@ https://github.com/Snailclimb/JavaGuide
     + 自己动手写Java虚拟机，张秀宏
     + Spring 技术内幕：深入解析 Spring架构与设计原理(第2版)
 + 数据库
-    + Mysql技术内幕:Innodb 存储引擎第二版，姜承尧
+    + MySQL技术内幕:Innodb 存储引擎第二版，姜承尧
     + Redis 设计与实现
 + 操作系统:
     + Linux 私房菜
@@ -68,6 +68,12 @@ https://github.com/Snailclimb/JavaGuide
     + Spring 实战
     + 深入浅出MySQL
 
+
+
+备读：
++ Baron Scbwartz等 著，王小东等 译；高性能MySQL（High Performance MySQL）；电子工业出版社，2010
++ Michael Kofler 著，杨晓云等 译；MySQL5权威指南（The Definitive Guide to MySQL5）；人民邮电出版社，2006
+
 ### log:
 
 
@@ -85,7 +91,6 @@ https://github.com/Snailclimb/JavaGuide
 
 
 
-> 技术债，总是要还的
 
 
 
