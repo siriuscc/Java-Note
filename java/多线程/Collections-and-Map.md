@@ -12,6 +12,10 @@ COW家族：Copy-On-Write, `读写分离`，如果是写操作，先复制一个
 
 ## Collections
 
+集合类都有哪些？
+
+
+
 ### ArrayList扩展: 右移一位
 
 也就是每次0.5倍

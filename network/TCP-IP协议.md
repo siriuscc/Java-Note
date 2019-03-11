@@ -25,142 +25,10 @@ TCP／IP协议簇模型, 分为四层:
 |SSH	|22		|   |
 
 
-### 什么是socket？
-
-socket是用来进行网络通信的，套接字。
-java里面已经有封装好这个类了，分为客户端和服务器，通过ip：port来进行访问。
 
 
-### IO，NIO，AIO，netty
+### TCP 和UDP
 
-什么是IO，什么是NIO，什么是AIO，什么是netty框架？
-
-
-IO 逃不掉的两个步骤：
-
-1. 等待 数据缓冲区 可读
-2. 将数据从 缓冲区拷贝到内存
-
-
-
-#### BIO and NIO and AIO
-
-+ BIO: 等待阻塞，数据拷贝阻塞
-	+ 传统的 java.io 包
-	+ IO 的效率和扩展性很低,不适合大量并发
-+ NIO： 等待不阻塞，数据拷贝阻塞
-	+ JDK1.4, java.nio 包，Non-blocking I/O
-	+ 提供了 Channel、Selector、Buffer 等新的抽象，可以构建多路复用的、同步非阻塞 IO 程序
-+ AIO：不阻塞，拷贝完通知
-	+ JDK1.7引入,Asynchronous IO
-	+ 回调机制+系统级别异步
-
-以socket.read()为例子：
-+ 传统的BIO里面socket.read()，如果TCP RecvBuffer里没有数据，函数会一直阻塞，直到收到数据，返回读到的数据。
-+ 对于NIO，如果TCP RecvBuffer有数据，就把数据从网卡读到内存，并且返回给用户；反之则直接返回0，永远不会阻塞。
-+ 最新的AIO(Async I/O)里面会更进一步：不但等待就绪是非阻塞的，就连数据从网卡到内存的过程也是异步的。
-
-关注点：
-+ BIO，最关心“我要读”
-+ NIO，最关心"我可以读了"，
-+ AIO，更需要关注的是“读完了”。
-
-
-
-#### NIO
-
-+ NIO的主要事件：读就绪、写就绪、有新连接到来。
-+ socket主要的读、写、注册和接收函数，在等待就绪阶段非阻塞，真正的I/O操作是同步阻塞的，消耗CPU但性能非常高
-+ 可以把工作细分，在不同的线程中执行。
-```java
-	//选择就绪的事件和对应的连接,select 是阻塞的
-	while(channel=Selector.select()){
-		if(channel.event==accept){
-			//如果是新连接，则注册一个新的读写处理器
-			registerNewChannelHandler(channel);
-		}
-		if(channel.event==write){
-			//如果可以写，则执行写事件
-			getChannelHandler(channel).channelWritable(channel);
-		}
-		if(channel.event==read){
-			//如果可以读，则执行读事件
-			getChannelHandler(channel).channelReadable(channel);
-		}
-	}
-```
-Java的Selector对于Linux系统来说，有一个致命限制：同一个channel的select不能被并发的调用。因此，如果有多个I/O线程，必须保证：一个socket只能属于一个IoThread，而一个IoThread可以管理多个socket。
-
-
-##### NIO应用：
-
-
-###### 每连接顺序请求的redis：
-
-由于redis服务端是串行的，能够保证同一连接的所有请求与返回顺序一致。这样可以使用单线程＋队列，把请求数据缓冲。然后pipeline发送，返回future，然后channel可读时，直接在队列中把future取回来，done()就可以了。
-
-###### 多连接短连接的HttpClient：
-
-做爬虫时，需要建立很多socket同时爬取多个站点，以socket为key，直接遍历可用事件；
-
-
-###### 常见的RPC框架，如Thrift，Dubbo：
-这种框架内部一般维护了请求的协议和请求号，可以维护一个以请求号为key，结果的result为future的map，结合NIO+长连接，获取非常不错的性能。
-
-
-### Reactor and Proactor
-
-+ Reactor:NIO,
-	1. 等待可用状态
-	2. 分发事件给处理函数进行读写。
-+ Proactor:AIO，系统级别异步。
-	1. 告诉系统 对应的缓冲区 和内存，数据长度，回调函数
-	2. 事件分发器调用操作系统API发起新的异步读写（新线程），由操作系统完成读写。读写完成通知分发器。
-	3. 分发器呼唤处理器，处理器异步处理后通知分发器
-
-
-
-tips:
-+ Reactor 回调handler时，表示可以read/write
-+ Proactor 回调handler时，表示已完成read/write
-
-
-
-NIO（，在Java领域，也称为New I/O），
-
-
-NIO存在的问题
-
-使用NIO != 高性能，当连接数<1000，并发程度不高或者局域网环境下NIO并没有显著的性能优势。NIO并没有完全屏蔽平台差异，它仍然是基于各个操作系统的I/O系统实现的，差异仍然存在。使用NIO做网络编程构建事件驱动模型并不容易，陷阱重重。
-
-NIO的优点：
-+ 事件驱动模型
-+ 避免多线程
-+ 单线程处理多任务
-+ 非阻塞I/O，I/O读写不再阻塞，而是返回0
-+ 基于block的传输，通常比基于流的传输更高效
-+ 更高级的IO函数，zero-copy
-+ IO多路复用大大提高了Java网络应用的可伸缩性和实用性
-
-
-参考：[Java NIO浅析-美团技术团队](https://www.zhihu.com/search?q=AIO%20NIO&type=content)
-
-
-
-netty是用来实现非阻塞IO的一个框架，这个作为拓展点，感兴趣可以去了解一下。我在面试阿里的时候被问到过，其他公司还没问过。
-
-
-#### Netty
-
-+ 本质：JBoss做的一个Jar包
-+ 目的：快速开发高性能、高可靠性的网络服务器和客户端程序
-+ 优点：提供异步的、事件驱动的网络应用程序框架和工具
-
-通俗的说：一个好使的处理Socket的东东
-
-参考:[通俗地讲，Netty 能做什么？](https://www.zhihu.com/question/24322387/answer/78947405)
-
-### TCP 和UDP的应用场景
 + TCP:可靠，面向连接
 	+ 三次握手，重新确认等机制保证可靠，
 	+ 过程略显复杂，有时延
@@ -235,7 +103,7 @@ Syn Cookie技术则完全不使用任何存储资源，它使用一种特殊的�
 3. sender<-receiver:FIN+ACK: receiver: 不再发送数据
 4. sender->receiver:ACK：断开连接
 
-![](.images/network/2019-03-02-10-19-02.png)
+![](.images/TCP-IP协议/2019-03-02-10-19-02.png)
 
 
 
@@ -265,7 +133,7 @@ ACK[ack,window],ACK一般被理解为对接受数据的确认，ACK报文包含�
 发送端窗口的第一个字节序号一定是ACK中期望收到的下一个字节序号
 
 
-![](.images/network/2019-03-02-15-11-55.png)
+![](.images/TCP-IP协议/2019-03-02-15-11-55.png)
 
 上图52 53 54 55 字节都是可以新发送的字节序
 
@@ -273,7 +141,7 @@ ACK[ack,window],ACK一般被理解为对接受数据的确认，ACK报文包含�
 
 
 
-![](.images/network/2019-03-02-15-19-47.png)
+![](.images/TCP-IP协议/2019-03-02-15-19-47.png)
 
 
 
@@ -289,12 +157,12 @@ TCP的Window是一个16bit位字段，它代表的是窗口的字节容量，也
 
 当收到接收方新的ACK时，窗口滑动
 
-![](.images/network/2019-03-02-15-11-55.png)
+![](.images/TCP-IP协议/2019-03-02-15-11-55.png)
 + 接收方的窗口大小取决于应用、系统、硬件的限制（TCP传输速率不能大于应用的数据处理速率）
 
 + 接收方每次收到数据包，发送新的ACK后向右移动窗口。
 
-![](.images/network/2019-03-02-15-29-02.png)
+![](.images/TCP-IP协议/2019-03-02-15-29-02.png)
 
 
 
@@ -303,7 +171,7 @@ TCP的Window是一个16bit位字段，它代表的是窗口的字节容量，也
 + TCP是双工协议，所以通信的两方都有各自的发送窗口和接收窗口
 + 应用程序通过改变接收窗口，间接改变发送窗口。
 
-![](.images/network/2019-03-02-15-32-10.png)
+![](.images/TCP-IP协议/2019-03-02-15-32-10.png)
 
 参考：[TCP协议的滑动窗口具体是怎样控制流量的？](https://www.zhihu.com/question/32255109/answer/68558623)
 
@@ -311,7 +179,7 @@ TCP的Window是一个16bit位字段，它代表的是窗口的字节容量，也
 #### 快速重传
 
 
-![](.images/network/2019-03-02-16-12-21.png)
+![](.images/TCP-IP协议/2019-03-02-16-12-21.png)
 
 图中确认$M_1$,也就是期待M1的下一个序列
 
@@ -322,7 +190,7 @@ TCP的Window是一个16bit位字段，它代表的是窗口的字节容量，也
 + 当sender连续收到三个重复确认，就把ssthresh减半，预防拥塞，但不是执行慢开始
 + 由于发送方现在认为网络很可能没有发生拥塞，因此与慢开始不同之处是现在不执行慢开始算法（即拥塞窗口cwnd现在不设置为1），cwnd=ssthresh,然后执行拥塞避免算法，线性增大拥塞窗口
 
-![](.images/network/2019-03-02-16-18-00.png)
+![](.images/TCP-IP协议/2019-03-02-16-18-00.png)
 
 
 #### 慢启动，拥塞避免
@@ -356,69 +224,14 @@ if(send(cwnd)==true){
 + cwnd>ssthresh,拥塞避免，每次稳定加一
 + 出现拥塞，阀值ssthresh减半，cwnd窗口置为1，以便网络中滞留的包能有时间被处理
 
-![](.images/network/2019-03-02-15-54-55.png)
+![](.images/TCP-IP协议/2019-03-02-15-54-55.png)
 
 “拥塞避免”并非指完全能够避免了拥塞。利用以上的措施要完全避免网络拥塞还是不可能的。“拥塞避免”是说在拥塞避免阶段将拥塞窗口控制为按线性规律增长，使网络比较不容易出现拥塞。
 
 [TCP的拥塞控制](https://www.cnblogs.com/losbyday/p/5847041.html)
 
 
-### 访问网站的背后
 
-
-当你输入域名访问一个网站的时候，背后的过程是什么？
-
-1. 域名解析，host-dns-ip
-2. 建立TCP连接：三次握手
-3. 加载资源
-	+ CDN
-	+ 前后端分离，反向代理，负载均衡
-
-
-
-
-### XSS 和CSRF
-
-
-#### XSS
-
-XSS:Cross-Site Scripting,跨站脚本攻击
-
-通过技术手段向正常用户请求的HTML页面插入恶意脚本，从而执行；
-
-+ 根源：用户提交的数据没有过滤
-
-+ 造成：前端和后端都可能，如后端的模板文件。
-+ 解决方案：
-	+ 后端对用户输入的数据做过滤和转义，Spring的HtmlUtils
-	+ 前端展示时 以文本格式处理，而不是html，如 innerText而非innerHTML
-
-
-#### CSRF
-
-CSRF:Cross-Site Request Forgery，跨站请求伪造
-
-
-+ 根源：HTTP接口没有防范不受信任的调用
-+ 造成： 用户在正常登录态，引导用户请求同个域的某个链接以完成用户不知的功能，例如，引导用户自动发起转账请求，自动转账，整个过程用户不可见
-
-+ 防范：
-	+ CSRF Token验证，利用浏览器的同源限制，在HTTP接口执行前验证页面或Cookie中设置的Token
-	+ 人机交互，如调用网银转账接口时校验短信验证码
-
-
-案例参考：[CSRF 是什么？](https://www.zhihu.com/search?q=CSRF&type=content)
-
-
-
-### 打开百度的首页大概需要多长时间，期间会经过哪些步骤和节点
-### CDN是怎么实现的，为什么可以访问到离请求最近的节点
-
-### 如果你有一个简历展示的服务器部署在北京，在湖南访问该服务器（可以直达，不考虑转发），会经过几次往返
-
-
-
-### 访问一个服务器的页面有的时候快有的时候慢，影响速度的因素有哪些，怎么求速度
 
 ### ARP协议
 
@@ -455,22 +268,4 @@ arp 攻击可以分为：
 	+ IP 生存时间 (TTL) 字段和 ICMP 错误消息
 	+ 未到达目的地：[ICMP time exceeded]
 	+ 已到目的地[ICMP port unreachable]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
