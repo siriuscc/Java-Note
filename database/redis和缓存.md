@@ -86,6 +86,85 @@ redis放弃传统的sql语句和ACID保证
 	+ Master进程主要进行一些全局性的初始化工作和管理Worker的工作；事件处理是在Worker中进行的。
 - redis单线程有什么缺点，如果用多线程有什么 优缺点
 
-
-
 - aof，rdb，优点，区别
+
+
+
+
+### redis订阅与发布：
+
+
+```bash
+
+# A 端
+SUBSCRIBE msg
+
+
+# B 端
+PUBLISH msg "hello world"
+```
+
+```c
+struct redisServer
+{
+
+    /* Pubsub */
+    // 字典，键为频道，值为链表
+    // 链表中保存了所有订阅某个频道的客户端
+    // 新客户端总是被添加到链表的表尾
+    dict *pubsub_channels; /* Map channels to list of subscribed clients */
+
+    // 这个链表记录了客户端订阅的所有模式的名字
+    list *pubsub_patterns; /* A list of pubsub_patterns */
+    ...
+
+}
+
+
+
+/* Publish a message 
+ *
+ * 将 message 发送到所有订阅频道 channel 的客户端，
+ * 以及所有订阅了和 channel 频道匹配的模式的客户端。
+ */
+int pubsubPublishMessage(robj *channel, robj *message) {
+    ...
+    /* Send to clients listening for that channel */
+    // 取出包含所有订阅频道 channel 的客户端的链表
+    // 并将消息发送给它们
+    de = dictFind(server.pubsub_channels,channel);
+    if (de) {
+        list *list = dictGetVal(de);
+        listNode *ln;
+        listIter li;
+
+        // 遍历客户端链表，将 message 发送给它们
+        listRewind(list,&li);
+        while ((ln = listNext(&li)) != NULL) {
+            redisClient *c = ln->value;
+
+            // 回复客户端。
+            // 示例：
+            // 1) "message"
+            // 2) "xxx"
+            // 3) "hello"
+            addReply(c,shared.mbulkhdr[3]);
+            // "message" 字符串
+            addReply(c,shared.messagebulk);
+            // 消息的来源频道
+            addReplyBulk(c,channel);
+            // 消息内容
+            addReplyBulk(c,message);
+
+            // 接收客户端计数
+            receivers++;
+        }
+    }
+
+    /* Send to clients listening to matching channels */
+    ...
+    // 返回计数
+    return receivers;
+}
+
+```

@@ -3,6 +3,9 @@
 
 
 
+
+
+
 一个Java 攻城狮的笔记
 ----
 
@@ -23,10 +26,12 @@
 - [ ] B+ tree 详细说一下
 - [ ] Linux Socket相关。
 - [ ] 分布式锁
+- [ ] 连接池
 
 
 
-
+优秀面经：
++ [春招面试经验总结](https://www.nowcoder.com/discuss/160872?type=0&order=0&pos=13&page=1)
 
 
 
@@ -34,6 +39,8 @@
 推荐一个git:
 https://github.com/Snailclimb/JavaGuide
 
+> 互联网的四大特征: 开放的精神，分享的心态，全球化的眼光，责任感。
+—— 马云
 
 ### 书单
 
@@ -58,6 +65,7 @@ https://github.com/Snailclimb/JavaGuide
     + 剑指offer
 + 架构：
     + 大型网站技术架构：核心原理与案例分析
+    + 大型网站系统与Java中间件实践
 + 高级内功心法：
     + 阿里巴巴Java开发手册
     + 重构
@@ -78,6 +86,7 @@ https://github.com/Snailclimb/JavaGuide
 备读：
 + Baron Scbwartz等 著，王小东等 译；高性能MySQL（High Performance MySQL）；电子工业出版社，2010
 + Michael Kofler 著，杨晓云等 译；MySQL5权威指南（The Definitive Guide to MySQL5）；人民邮电出版社，2006
++ 数据库系统实现
 
 ### log:
 
@@ -94,9 +103,19 @@ https://github.com/Snailclimb/JavaGuide
 
 
 
+开发tip:
 
++ 不要相信任何开发
+一定要保留老版本，一旦新版本出问题，确保随时可以回滚
 
++ 不要相信任何测试
+不论线下怎么测试，上线以后还是有可能出问题。因此需要做灰度发布，新版本先开放给一小部分用户进行真实测试，没问题再向所有用户开放。
 
++ 不要相信任何应用
+任何应用都可能崩溃，必要的时候做服务降级和限流，以保证核心业务可用。
+
++ 不要相信任何硬件
+业务做跨机房部署，进行容灾。
 
 
 
