@@ -41,7 +41,9 @@ IO 逃不掉的两个步骤：
 
 
 
-#### NIO
+#### NIO： Non-Blocking IO
+
+![](.images/socket和io/2019-03-12-22-19-15.png)
 
 + NIO的主要事件：读就绪、写就绪、有新连接到来。
 + socket主要的读、写、注册和接收函数，在等待就绪阶段非阻塞，真正的I/O操作是同步阻塞的，消耗CPU但性能非常高
@@ -130,10 +132,54 @@ netty是用来实现非阻塞IO的一个框架，这个作为拓展点，感兴�
 
 #### Netty
 
-+ 本质：JBoss做的一个Jar包
-+ 目的：快速开发高性能、高可靠性的网络服务器和客户端程序
-+ 优点：提供异步的、事件驱动的网络应用程序框架和工具
+> Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
 
-通俗的说：一个好使的处理Socket的东东
+Netty 是一个用于快速开发可维护的高性能服务器或客户端的异步事件驱动网络应用框架。
+
+
+JDK 原生也有一套网络应用程序 API，但是存在一系列问题，主要如下：
+
++ NIO 的类库和 API 繁杂，使用麻烦。你需要熟练掌握 Selector、ServerSocketChannel、SocketChannel、ByteBuffer 等。
++ 需要具备其他的额外技能做铺垫。例如熟悉 Java 多线程编程，因为 NIO 编程涉及到 Reactor 模式，你必须对多线程和网路编程非常熟悉，才能编写出高质量的 NIO 程序。
++ 可靠性能力补齐，开发工作量和难度都非常大。例如客户端面临断连重连、网络闪断、半包读写、失败缓存、网络拥塞和异常码流的处理等等。 NIO 编程的特点是功能开发相对容易，但是可靠性能力补齐工作量和难度都非常大。
++ JDK NIO 的 Bug。例如臭名昭著的 Epoll Bug，它会导致 Selector 空轮询，最终导致 CPU 100%。 官方声称在 JDK 1.6 版本的 update 18 修复了该问题，但是直到 JDK 1.7 版本该问题仍旧存在，只不过该 Bug 发生概率降低了一些而已，它并没有被根本解决。
+
+Netty 的特点:
+
+Netty 对 JDK 自带的 NIO 的 API 进行封装，解决上述问题，主要特点有：
+
++ 设计优雅，适用于各种传输类型的统一 API 阻塞和非阻塞 Socket；基于灵活且可扩展的事件模型，可以清晰地分离关注点；高度可定制的线程模型 - 单线程，一个或多个线程池；真正的无连接数据报套接字支持（自 3.1 起）。
++ 使用方便，详细记录的 Javadoc，用户指南和示例；没有其他依赖项，JDK 5（Netty 3.x）或 6（Netty 4.x）就足够了。
++ 高性能，吞吐量更高，延迟更低；减少资源消耗；最小化不必要的内存复制。
+安全，完整的 SSL/TLS 和 StartTLS 支持。
++ 社区活跃，不断更新，社区活跃，版本迭代周期短，发现的 Bug 可以被及时修复，同时，更多的新功能会被加入。
+
+Netty 常见使用场景
+
++ 互联网行业。在分布式系统中，各个节点之间需要远程服务调用，高性能的 RPC 框架必不可少，Netty 作为`异步高性能`的通信框架，往往作为基础通信组件被这些 RPC 框架使用。 典型的应用有：阿里分布式服务框架 Dubbo 的 RPC 框架使用 Dubbo 协议进行节点间通信，Dubbo 协议默认使用 Netty 作为基础通信组件，用于实现各进程节点之间的内部通信。
++ 游戏行业。无论是手游服务端还是大型的网络游戏，Java 语言得到了越来越广泛的应用。Netty 作为高性能的基础通信组件，它本身提供了 TCP/UDP 和 HTTP 协议栈。 非常方便定制和开发私有协议栈，账号登录服务器，地图服务器之间可以方便的通过 Netty 进行高性能的通信。
++ 大数据领域。经典的 Hadoop 的高性能通信和序列化组件 Avro 的 RPC 框架，默认采用 Netty 进行跨界点通信，它的 Netty Service 基于 Netty 框架二次封装实现。
+
+
+![images](.images/socket和io/2019-03-12-22-27-22.png)
+
+
+0. ServerBootstrap.bind 绑定端口，如20880
+1. 初始化Channel
+2. 注册Channel 到 boss Selector
+3. boss Selector 监听 accept 事件
+4. 当boss Selector 监听到时，建立与客户端的Channel
+5. 把Channel 注册到 worker Selector
+6. worker Selector 监听 read/write 事件
+7. worker Selector处理读写事件，读写任务进入任务队列
+
+
+
+
+
+
+
+
+
 
 参考:[通俗地讲，Netty 能做什么？](https://www.zhihu.com/question/24322387/answer/78947405)

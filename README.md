@@ -76,7 +76,6 @@ https://github.com/Snailclimb/JavaGuide
 
 
 
-
 + 字典书，可以拿来做开发案头书，不需要熟记的：
     + Spring 实战
     + 深入浅出MySQL
@@ -87,6 +86,14 @@ https://github.com/Snailclimb/JavaGuide
 + Baron Scbwartz等 著，王小东等 译；高性能MySQL（High Performance MySQL）；电子工业出版社，2010
 + Michael Kofler 著，杨晓云等 译；MySQL5权威指南（The Definitive Guide to MySQL5）；人民邮电出版社，2006
 + 数据库系统实现
++ 《Netty实战》（推荐，豆瓣评分 7.8，92人评价）
++ 《从Paxos到Zookeeper》（推荐，豆瓣评分 7.8，0.3K人评价）《Java编程思想(第4版)》（推荐，豆瓣评分 9.1，3.2K+人评价）
++ 亿级流量网站架构核心技术
++ 企业IT架构转型之道：阿里巴巴中台战略思想与架构实战 （8.3，386人评价，强推）
+
+
+
+
 
 ### log:
 
