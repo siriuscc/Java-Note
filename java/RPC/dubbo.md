@@ -135,10 +135,61 @@ Redis方案要求服务器时间同步且存在性能消耗过大的缺点
 
 #### Random LoadBalance: 基于权重的随机负载均衡
 
+RandomLoadBalance 是加权随机算法的具体实现，它的算法思想很简单。假设我们有一组服务器 servers = [A, B, C]，他们对应的权重为 weights = [5, 3, 2]，权重总和为10。现在把这些权重值平铺在一维坐标值上，[0, 5) 区间属于服务器 A，[5, 8) 区间属于服务器 B，[8, 10) 区间属于服务器 C。接下来通过随机数生成器生成一个范围在 [0, 10) 之间的随机数，然后计算这个随机数会落到哪个区间上。比如数字3会落到服务器 A 对应的区间上，此时返回服务器 A 即可。权重越大的机器，在坐标轴上对应的区间范围就越大，因此随机数生成器生成的数字就会有更大的概率落到此区间内。只要随机数生成器产生的随机数分布性很好，在经过多次选择后，每个服务器被选中的次数比例接近其权重比例。比如，经过一万次选择后，服务器 A 被选中的次数大约为5000次，服务器 B 被选中的次数约为3000次，服务器 C 被选中的次数约为2000次。
 
-访问的次数在整体上是保持和权重比同步的
 
+```java
+public class RandomLoadBalance extends AbstractLoadBalance {
 
+    public static final String NAME = "random";
+
+    private final Random random = new Random();
+
+    @Override
+    protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
+        int length = invokers.size();
+        int totalWeight = 0;
+        boolean sameWeight = true;
+        // 下面这个循环有两个作用，第一是计算总权重 totalWeight，
+        // 第二是检测每个服务提供者的权重是否相同
+        for (int i = 0; i < length; i++) {
+            int weight = getWeight(invokers.get(i), invocation);
+            // 累加权重
+            totalWeight += weight;
+            // 检测当前服务提供者的权重与上一个服务提供者的权重是否相同，
+            // 不相同的话，则将 sameWeight 置为 false。
+            if (sameWeight && i > 0
+                    && weight != getWeight(invokers.get(i - 1), invocation)) {
+                sameWeight = false;
+            }
+        }
+        
+        // 下面的 if 分支主要用于获取随机数，并计算随机数落在哪个区间上
+        if (totalWeight > 0 && !sameWeight) {
+            // 随机获取一个 [0, totalWeight) 区间内的数字
+            int offset = random.nextInt(totalWeight);
+            // 循环让 offset 数减去服务提供者权重值，当 offset 小于0时，返回相应的 Invoker。
+            // 举例说明一下，我们有 servers = [A, B, C]，weights = [5, 3, 2]，offset = 7。
+            // 第一次循环，offset - 5 = 2 > 0，即 offset > 5，
+            // 表明其不会落在服务器 A 对应的区间上。
+            // 第二次循环，offset - 3 = -1 < 0，即 5 < offset < 8，
+            // 表明其会落在服务器 B 对应的区间上
+            for (int i = 0; i < length; i++) {
+                // 让随机值 offset 减去权重值
+                offset -= getWeight(invokers.get(i), invocation);
+                if (offset < 0) {
+                    // 返回相应的 Invoker
+                    return invokers.get(i);
+                }
+            }
+        }
+        
+        // 如果所有服务提供者权重值相同，此时直接随机返回一个即可
+        return invokers.get(random.nextInt(length));
+    }
+}
+```
+RandomLoadBalance 的算法思想比较简单，在经过多次请求后，能够将调用请求按照权重值进行“均匀”分配。当然 RandomLoadBalance 也存在一定的缺点，当调用次数比较少时，Random 产生的随机数可能会比较集中，此时多数请求会落到同一台服务器上。这个缺点并不是很严重，多数情况下可以忽略。RandomLoadBalance 是一个简单，高效的负载均衡实现，因此 Dubbo 选择它作为缺省实现。
 
 
 #### RoundRobin LoadBalance 基于权重的轮询
@@ -153,7 +204,130 @@ Redis方案要求服务器时间同步且存在性能消耗过大的缺点
 
 #### LeastActive LoadBalance 最少活跃数 
 
-统计上一次的调用时间，上次调用时间短的，优先使用
+
+LeastActiveLoadBalance 翻译过来是最小活跃数负载均衡。活跃调用数越小，表明该服务提供者效率越高，单位时间内可处理更多的请求。此时应优先将请求分配给该服务提供者。在具体实现中，每个服务提供者对应一个活跃数 active。初始情况下，所有服务提供者活跃数均为0。每收到一个请求，活跃数加1，完成请求后则将活跃数减1。在服务运行一段时间后，性能好的服务提供者处理请求的速度更快，因此活跃数下降的也越快，此时这样的服务提供者能够优先获取到新的服务请求、这就是最小活跃数负载均衡算法的基本思想。除了最小活跃数，LeastActiveLoadBalance 在实现上还引入了权重值。所以准确的来说，LeastActiveLoadBalance 是基于加权最小活跃数算法实现的。举个例子说明一下，在一个服务提供者集群中，有两个性能优异的服务提供者。某一时刻它们的活跃数相同，此时 Dubbo 会根据它们的权重去分配请求，权重越大，获取到新请求的概率就越大。如果两个服务提供者权重相同，此时随机选择一个即可。
+
+
+```java
+public class LeastActiveLoadBalance extends AbstractLoadBalance {
+
+    public static final String NAME = "leastactive";
+    private final Random random = new Random();
+    @Override
+    protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
+        int length = invokers.size();
+        // 最小的活跃数
+        int leastActive = -1;
+        // 具有相同“最小活跃数”的服务者提供者（以下用 Invoker 代称）数量
+        int leastCount = 0; 
+        // leastIndexs 用于记录具有相同“最小活跃数”的 Invoker 在 invokers 列表中的下标信息
+        int[] leastIndexs = new int[length];
+        int totalWeight = 0;
+        // 第一个最小活跃数的 Invoker 权重值，用于与其他具有相同最小活跃数的 Invoker 的权重进行对比，
+        // 以检测是否“所有具有相同最小活跃数的 Invoker 的权重”均相等
+        int firstWeight = 0;
+        boolean sameWeight = true;
+
+        // 遍历 invokers 列表
+        for (int i = 0; i < length; i++) {
+            Invoker<T> invoker = invokers.get(i);
+            // 获取 Invoker 对应的活跃数
+            int active = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName()).getActive();
+            // 获取权重 - ⭐️
+            int weight = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.WEIGHT_KEY, Constants.DEFAULT_WEIGHT);
+            // 发现更小的活跃数，重新开始
+            if (leastActive == -1 || active < leastActive) {
+            	// 使用当前活跃数 active 更新最小活跃数 leastActive
+                leastActive = active;
+                // 更新 leastCount 为 1
+                leastCount = 1;
+                // 记录当前下标值到 leastIndexs 中
+                leastIndexs[0] = i;
+                totalWeight = weight;
+                firstWeight = weight;
+                sameWeight = true;
+
+            // 当前 Invoker 的活跃数 active 与最小活跃数 leastActive 相同 
+            } else if (active == leastActive) {
+            	// 在 leastIndexs 中记录下当前 Invoker 在 invokers 集合中的下标
+                leastIndexs[leastCount++] = i;
+                // 累加权重
+                totalWeight += weight;
+                // 检测当前 Invoker 的权重与 firstWeight 是否相等，
+                // 不相等则将 sameWeight 置为 false
+                if (sameWeight && i > 0
+                    && weight != firstWeight) {
+                    sameWeight = false;
+                }
+            }
+        }
+        
+        // 当只有一个 Invoker 具有最小活跃数，此时直接返回该 Invoker 即可
+        if (leastCount == 1) {
+            return invokers.get(leastIndexs[0]);
+        }
+
+        // 有多个 Invoker 具有相同的最小活跃数，但它们之间的权重不同
+        if (!sameWeight && totalWeight > 0) {
+        	// 随机生成一个 [0, totalWeight) 之间的数字
+            int offsetWeight = random.nextInt(totalWeight);
+            // 循环让随机数减去具有最小活跃数的 Invoker 的权重值，
+            // 当 offset 小于等于0时，返回相应的 Invoker
+            for (int i = 0; i < leastCount; i++) {
+                int leastIndex = leastIndexs[i];
+                // 获取权重值，并让随机数减去权重值 - ⭐️
+                offsetWeight -= getWeight(invokers.get(leastIndex), invocation);
+                if (offsetWeight <= 0)
+                    return invokers.get(leastIndex);
+            }
+        }
+        // 如果权重相同或权重为0时，随机返回一个 Invoker
+        return invokers.get(leastIndexs[random.nextInt(leastCount)]);
+    }
+}
+```
+
+上面代码的逻辑比较多，我们在代码中写了大量的注释，有帮助大家理解代码逻辑。下面简单总结一下以上代码所做的事情，如下：
+
+遍历 invokers 列表，寻找活跃数最小的 Invoker
+如果有多个 Invoker 具有相同的最小活跃数，此时记录下这些 Invoker 在 invokers 集合中的下标，并累加它们的权重，比较它们的权重值是否相等
+如果只有一个 Invoker 具有最小的活跃数，此时直接返回该 Invoker 即可
+如果有多个 Invoker 具有最小活跃数，且它们的权重不相等，此时处理方式和 RandomLoadBalance 一致
+如果有多个 Invoker 具有最小活跃数，但它们的权重相等，此时随机返回一个即可
+以上就是 LeastActiveLoadBalance 大致的实现逻辑，大家在阅读的源码的过程中要注意区分活跃数与权重这两个概念，不要混为一谈。
+
+以上分析是基于 Dubbo 2.6.4 版本进行的，由于近期 Dubbo 2.6.5 发布了，并对 LeastActiveLoadBalance 进行了一些修改，下面简单来介绍一下修改内容。回到上面的源码中，我们在上面的代码中标注了两个黄色的五角星⭐️。两处标记对应的代码分别如下：
+
+
+```java
+int weight = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.WEIGHT_KEY, Constants.DEFAULT_WEIGHT);
+```
+
+```java
+offsetWeight -= getWeight(invokers.get(leastIndex), invocation);
+```
+
+问题出在服务预热阶段，第一行代码直接从 url 中取权重值，未被降权过。第二行代码获取到的是经过降权后的权重。第一行代码获取到的权重值最终会被累加到权重总和 totalWeight 中，这个时候会导致一个问题。offsetWeight 是一个在 [0, totalWeight) 范围内的随机数，而它所减去的是经过降权的权重。很有可能在经过 leastCount 次运算后，offsetWeight 仍然是大于0的，导致无法选中 Invoker。这个问题对应的 issue 为 #904，并在 pull request #2172 中被修复。具体的修复逻辑是将标注一处的代码修改为：
+```java
+// afterWarmup 等价于上面的 weight 变量，这样命名是为了强调该变量经过了 warmup 降权处理
+int afterWarmup = getWeight(invoker, invocation);
+```
+另外，2.6.4 版本中的 LeastActiveLoadBalance 还要一个缺陷，即当一组 Invoker 具有相同的最小活跃数，且其中一个 Invoker 的权重值为1，此时这个 Invoker 无法被选中。缺陷代码如下：
+```java
+int offsetWeight = random.nextInt(totalWeight);
+for (int i = 0; i < leastCount; i++) {
+    int leastIndex = leastIndexs[i];
+    offsetWeight -= getWeight(invokers.get(leastIndex), invocation);
+    if (offsetWeight <= 0)    // ❌
+        return invokers.get(leastIndex);
+}
+```
+问题出在了offsetWeight <= 0上，举例说明，假设有一组 Invoker 的权重为 5、2、1，offsetWeight 最大值为 7。假设 offsetWeight = 7，你会发现，当 for 循环进行第二次遍历后 offsetWeight = 7 - 5 - 2 = 0，提前返回了。此时，此时权重为1的 Invoker 就没有机会被选中了。该问题在 Dubbo 2.6.5 中被修复了，修改后的代码如下：
+```java
+int offsetWeight = random.nextInt(totalWeight) + 1;
+```
+
+
 
 ![图中右边表示上次调用花费的时间](.images/dubbo/2019-03-12-21-54-01.png)
 
@@ -290,3 +464,60 @@ resource/META-INFO.spring/dubbo-demo-provider.xml
 
 
 SPI 全称为 Service Provider Interface，是一种服务发现机制。SPI 的本质是将接口实现类的全限定名配置在文件中，并由服务加载器读取配置文件，加载实现类。这样可以在运行时，动态为接口替换实现类。
+
+
+
+
+
+
+在 Dubbo 中，所有负载均衡实现类均继承自 AbstractLoadBalance，该类实现了 LoadBalance 接口，并封装了一些公共的逻辑。所以在分析负载均衡实现之前，先来看一下 AbstractLoadBalance 的逻辑。首先来看一下负载均衡的入口方法 select，如下：
+
+```java
+@Override
+public <T> Invoker<T> select(List<Invoker<T>> invokers, URL url, Invocation invocation) {
+    if (invokers == null || invokers.isEmpty())
+        return null;
+    // 如果 invokers 列表中仅有一个 Invoker，直接返回即可，无需进行负载均衡
+    if (invokers.size() == 1)
+        return invokers.get(0);
+    
+    // 调用 doSelect 方法进行负载均衡，该方法为抽象方法，由子类实现
+    return doSelect(invokers, url, invocation);
+}
+
+protected abstract <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation);
+```
+
+AbstractLoadBalance 除了实现了 LoadBalance 接口方法，还封装了一些公共逻辑，比如服务提供者权重计算逻辑。具体实现如下：
+
+```java
+protected int getWeight(Invoker<?> invoker, Invocation invocation) {
+    // 从 url 中获取权重 weight 配置值
+    int weight = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.WEIGHT_KEY, Constants.DEFAULT_WEIGHT);
+    if (weight > 0) {
+        // 获取服务提供者启动时间戳
+        long timestamp = invoker.getUrl().getParameter(Constants.REMOTE_TIMESTAMP_KEY, 0L);
+        if (timestamp > 0L) {
+            // 计算服务提供者运行时长
+            int uptime = (int) (System.currentTimeMillis() - timestamp);
+            // 获取服务预热时间，默认为10分钟
+            int warmup = invoker.getUrl().getParameter(Constants.WARMUP_KEY, Constants.DEFAULT_WARMUP);
+            // 如果服务运行时间小于预热时间，则重新计算服务权重，即降权
+            if (uptime > 0 && uptime < warmup) {
+                // 重新计算服务权重
+                weight = calculateWarmupWeight(uptime, warmup, weight);
+            }
+        }
+    }
+    return weight;
+}
+
+static int calculateWarmupWeight(int uptime, int warmup, int weight) {
+    // 计算权重，下面代码逻辑上形似于 (uptime / warmup) * weight。
+    // 随着服务运行时间 uptime 增大，权重计算值 ww 会慢慢接近配置值 weight
+    int ww = (int) ((float) uptime / ((float) warmup / (float) weight));
+    return ww < 1 ? 1 : (ww > weight ? weight : ww);
+}
+```
+
+上面是权重的计算过程，该过程主要用于保证当服务运行时长小于服务预热时间时，对服务进行降权，避免让服务在启动之初就处于高负载状态。服务预热是一个优化手段，与此类似的还有 JVM 预热。主要目的是让服务启动后“低功率”运行一段时间，使其效率慢慢提升至最佳状态。
