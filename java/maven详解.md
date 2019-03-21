@@ -5,6 +5,49 @@
 
 
 
+创建项目：
+
+```bash
+
+mvn archetype:create 
+    -DgroupId=com.wuhao.maven.quickstart 
+    -DartifactId=simple 
+    -DarchetypeArtifactId=maven-archetype-quickstart
+
+```
+
+
+
++ archetype:create：创建项目，现在maven高一点的版本都弃用了create命令而使用generate命令了。
+
++ -DgroupId=com.wuhao.maven.quickstart ：创建该maven项目时的groupId是什么，该作用在上面已经解释了。一般使用包名的写法。因为包名是用公司的域名的反写，独一无二
+
+
++ -DarchetypeArtifactId=maven-archetype-quickstart：表示创建的是[maven]java项目
+
+
+运行的前提：需要联网，必须上网下载一个小文件
+
+编译：mvn compile　　--src/main/java目录java源码编译生成class （target目录下）
+测试：mvn test　　　　--src/test/java 目录编译
+
+清理：mvn clean　　　 --删除target目录，也就是将class文件等删除
+
+打包：mvn package　　--生成压缩文件：java项目#jar包；web项目#war包，也是放在target目录下
+
+安装：mvn install　　　--将压缩文件(jar或者war)上传到本地仓库
+
+部署|发布：mvn deploy　　--将压缩文件上传私服
+
+
+
+　maven java或web项目转换Eclipse工程
+
+mvn eclipse:eclipse
+mvn eclipse:clean　　清楚eclipse设置信息，又从eclipse工程转换为maven原生项目了...转换IDEA工程
+mvn idea:idea
+mvn idea:clean　　同上　
+
 
 ### maven 范围
 

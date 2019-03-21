@@ -68,8 +68,8 @@ AOP是一种思想，与此对应诞生了AOP联盟。
 + advice:通知，在切点前后执行的方法，before(),after()
 + aspect:切面,before()+切点+after()
 + weaving:切面应用到目标函数的过程称为织入(weaving)。
-	+ 动态织入,采用Java的`Proxy`包,Spring 优先采用Proxy
-	+ 静态织入，采用`CGLib`,ApectJ优先采用CGLib
+    + 动态织入,采用Java的`Proxy`包,Spring 优先采用Proxy
+    + 静态织入，采用`CGLib`,ApectJ优先采用CGLib
 
 
 ### ApectJ 的织入
@@ -153,11 +153,11 @@ ApectJ主要采用的是编译期织入，在这个期间使用AspectJ的acj编�
 @Documented
 public @interface Autowired {
 
-	/**
-	 * Declares whether the annotated dependency is required.
-	 * <p>Defaults to {@code true}.
-	 */
-	boolean required() default true;
+    /**
+     * Declares whether the annotated dependency is required.
+     * <p>Defaults to {@code true}.
+     */
+    boolean required() default true;
 
 }
 
@@ -167,7 +167,7 @@ public @interface Autowired {
 看到这么一段话：
 
 ```java
- * <p>Note that actual injection is performed through a
+ /* Note that actual injection is performed through a
  * {@link org.springframework.beans.factory.config.BeanPostProcessor
  * BeanPostProcessor} which in turn means that you <em>cannot</em>
  * use {@code @Autowired} to inject references into
@@ -176,60 +176,124 @@ public @interface Autowired {
  * {@link org.springframework.beans.factory.config.BeanFactoryPostProcessor BeanFactoryPostProcessor}
  * types. Please consult the javadoc for the {@link AutowiredAnnotationBeanPostProcessor}
  * class (which, by default, checks for the presence of this annotation).
- * 
-
- ```
+ */
+```
 
 注意实际上的注释是通过` org.springframework.beans.factory.config.BeanPostProcessor` 表现的，
 这也意味着无法用Autowired自动装载BeanPostProcessor 和 AutowiredAnnotationBeanPostProcessor
 
 
 
+```java
+    //此构造函数基于当前Web应用程序内容对此实例执行注入，并将其作为基类使用。
+    public SpringBeanAutowiringSupport() {
+        processInjectionBasedOnCurrentContext(this);
+    }
 
+    /**
+     * Process {@code @Autowired} injection for the given target object,
+     * based on the current web application context.
+     * <p>Intended for use as a delegate.
+     * @param target the target object to process
+     * @see org.springframework.web.context.ContextLoader#getCurrentWebApplicationContext()
+     */
+    public static void processInjectionBasedOnCurrentContext(Object target) {
+        
+        //断言被注入的对象非空
+        Assert.notNull(target, "Target object must not be null");
+        // 得到ApplicationContext
+        WebApplicationContext cc = ContextLoader.getCurrentWebApplicationContext();
+        if (cc != null) {
+            
+            AutowiredAnnotationBeanPostProcessor bpp = new AutowiredAnnotationBeanPostProcessor();
+            //设置bean工厂
+            bpp.setBeanFactory(cc.getAutowireCapableBeanFactory());
+            //注入
+            bpp.processInjection(target);
+        }
+        else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Current WebApplicationContext is not available for processing of " +
+                        ClassUtils.getShortName(target.getClass()) + ": " +
+                        "Make sure this class gets constructed in a Spring web application. Proceeding without injection.");
+            }
+        }
+    }
+```    
+
+
+## 设计模式在 Spring 中的应用
+
+
+### Factory Method
+
+
+
+配置调用静态方法创建类
 
 
 ```java
-	//此构造函数基于当前Web应用程序内容对此实例执行注入，并将其作为基类使用。
-	public SpringBeanAutowiringSupport() {
-		processInjectionBasedOnCurrentContext(this);
-	}
+public class StaticFactoryBean {
+      public static Integer createRandom() {
+           return new Integer(new Random().nextInt());
+       }
+}
+```
+
+```  xml  
 
 
+<bean id="random" class="example.chapter3.StaticFactoryBean" factory-method="createRandom" //createRandom方法必须是static的,才能找到
+scope="prototype"/>
+```
+```java
 
+public static void main(String[] args) {
 
-/**
-	 * Process {@code @Autowired} injection for the given target object,
-	 * based on the current web application context.
-	 * <p>Intended for use as a delegate.
-	 * @param target the target object to process
-	 * @see org.springframework.web.context.ContextLoader#getCurrentWebApplicationContext()
-	 */
-	public static void processInjectionBasedOnCurrentContext(Object target) {
-		
-		//断言被注入的对象非空
-		Assert.notNull(target, "Target object must not be null");
-		// 得到ApplicationContext
-		WebApplicationContext cc = ContextLoader.getCurrentWebApplicationContext();
-		if (cc != null) {
-			
-			AutowiredAnnotationBeanPostProcessor bpp = new AutowiredAnnotationBeanPostProcessor();
-			//设置bean工厂
-			bpp.setBeanFactory(cc.getAutowireCapableBeanFactory());
-			//注入
-			bpp.processInjection(target);
-		}
-		else {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Current WebApplicationContext is not available for processing of " +
-						ClassUtils.getShortName(target.getClass()) + ": " +
-						"Make sure this class gets constructed in a Spring web application. Proceeding without injection.");
-			}
-		}
-	}
-
-
-
-
+      //调用getBean()时,返回随机数.如果没有指定factory-method,会返回StaticFactoryBean的实例,即返回工厂Bean的实例
+      XmlBeanFactory factory = new XmlBeanFactory(new ClassPathResource("config.xml"));
+      System.out.println("我是IT学习者创建的实例:"+factory.getBean("random").toString());
+}
 ```
 
 
+### 单例模式（Singleton）
+
+Spring下默认的bean均为singleton，可以通过singleton=“true|false” 或者 scope=“？”来指定
+
+
+
+### 代理模式 Proxy
+在Spring的Aop中，使用的Advice（通知）来增强被代理类的功能。Spring实现这一AOP功能的原理就使用代理模式
+1. JDK动态代理。
+2. CGLib字节码生成技术代理
+对类进行方法级别的切面增强，即，生成被代理类的代理类， 并在代理类的方法前，设置拦截器，通过执行拦截器重的内容增强了代理方法的功能，实现的面向切面编程。
+
+
+### 观察者（Observer）
+
+
+定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都得到通知并被自动更新。
+
+spring中Observer模式常用的地方是listener的实现。如ApplicationListener。 
+
+
+
+### 策略（Strategy）
+
+
+
+
+
+
+### 模板方法（Template Method）
+
+
+定义一个操作中的算法的骨架，而将一些步骤延迟到子类中。Template Method使得子类可以不改变一个算法的结构即可重定义该算法的某些特定步骤。
+
+Template Method模式一般是需要继承的。这里想要探讨另一种对Template Method的理解。spring中的JdbcTemplate，在用这个类时并不想去继承这个类，因为这个类的方法太多，但是我们还是想用到JdbcTemplate已有的稳定的、公用的数据库连接，那么我们怎么办呢？我们可以把变化的东西抽出来作为一个参数传入JdbcTemplate的方法中。但是变化的东西是一段代码，而且这段代码会用到JdbcTemplate中的变量。怎么办？那我们就用回调对象吧。在这个回调对象中定义一个操纵JdbcTemplate中变量的方法，我们去实现这个方法，就把变化的东西集中到这里了。然后我们再传入这个回调对象到JdbcTemplate，从而完成了调用。这可能是Template Method不需要继承的另一种实现方式吧。 
+
+
+
+
+参考：[详解设计模式在 Spring 中的应用](https://mp.weixin.qq.com/s/akC9U_JtENGAs3tJKCXwgw)
