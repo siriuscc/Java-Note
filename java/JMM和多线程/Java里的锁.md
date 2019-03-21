@@ -2,8 +2,6 @@
 
 浅谈Java里的锁
 -----
-:star::star::star::star::star:
-
 [TOC]
 
 
