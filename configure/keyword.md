@@ -78,4 +78,18 @@ ctrl +q 查看文档
 
 
 
+## win 10
+
+win+A 操作中心
+win+I 设置
+win+s 搜索
+
+win+, 预览桌面
+
+win+shift+s 截图
+Win + Ctrl + D 创建虚拟桌面
+Win + Ctrl + F4 关闭当前虚拟桌面
+Win + Ctrl + ← 向左切换虚拟桌面
+Win + Ctrl + → 向右切换虚拟桌面
+
 
