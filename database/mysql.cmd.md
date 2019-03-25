@@ -136,4 +136,18 @@ select count(uid),(case
 
 
 
+1、一张表，里面有ID自增主键，当insert了17条记录之后，删除了第15,16,17条记录，再把Mysql重启，再insert一条记录，这条记录的ID是18还是15 ？
+
+
++ 如果表的类型是MyISAM,那么是18
+因为MyISAM会把自增主键的最大ID持久化到数据文件，重启MySQL并不丢失
++ 如果表的引擎是InnoDB,那么是15
+InnoDB只把最大主键记录到内存中，重启或者 OPTIMEIZE 操作都会导致最大ID丢失
+
+Heap表是什么？
++ HEAP表存在于内存中，用于临时高速存储。
++ BLOB或TEXT字段是不允许的
++ 只能使用比较运算符 ，<，>， >， <
++ HEAP表不支持AUTO_INCREMENT
++ 索引不可为NULL
 

@@ -1,42 +1,37 @@
-
-> 技术债，总是要还的
-
-offer = 心态 * (实力 + 面试技巧) + 缘分运气
-
-
-
-
 一个Java 攻城狮的笔记
 ----
 
-涉及Java，数据结构，算法，前端，数据库的相关知识，补充面试的相关知识。
-
-
-### TODO：
-
-- [ ] 移位运算
-- [ ] 内网穿透原理
-- [ ] 支付失败如何处理，说一下思路。
-- [ ] dubbo 的底层实现，通信协议，RPC的底层原理，和spring cloud 的对比，和JSF 的对比
-- [ ] mycat 学习
-
-- [ ] 常见的SQL 优化手段
-- [ ] Linux Socket相关。
-- [ ] 分布式锁
-- [ ] 连接池
-- [ ] shiro 的 RBAC 模型说下，资源的概念聊一下。
++ 涉及Java，数据结构，算法，前端，数据库的相关知识，补充面试的相关知识。
++ 推荐使用vscode-Markdown Preview Enhanced插件打开。
 
 
 
-优秀面经：
+
+### 优秀面经：
+
+> offer = 心态 * (实力 + 面试技巧) + 缘分运气
+
 + [春招面试经验总结](https://www.nowcoder.com/discuss/160872?type=0&order=0&pos=13&page=1)
 
++ [【技术类】2019校招技术类岗位面经汇总](https://www.nowcoder.com/discuss/146655)
 
 
 
-推荐一个git:
-https://github.com/Snailclimb/JavaGuide
+### star git:
 
++ [Java 学习/面试指南](https://github.com/Snailclimb/JavaGuide)
++ [后端架构师技术图谱](https://github.com/xingshaocheng/architect-awesome)
++ 设计模式最佳实践：[java-design-patterns](https://github.com/iluwatar/java-design-patterns)
+
++ 《Redis 设计与实现》参考：[注释版的 Redis 3.0 源码](https://github.com/huangz1990/redis-3.0-annotated)
+
++ [阿里龙井JDK](https://github.com/alibaba/dragonwell8)
+
+
+
+### 社区
+
++ [阿里云栖社区](https://yq.aliyun.com/)
 
 
 ### book list
@@ -80,6 +75,10 @@ https://github.com/Snailclimb/JavaGuide
 
 
 #### To Read：
+
+> 技术债，总是要还的
+
+
 + Baron Scbwartz等 著，王小东等 译；高性能MySQL（High Performance MySQL）；电子工业出版社，2010
 + Michael Kofler 著，杨晓云等 译；MySQL5权威指南（The Definitive Guide to MySQL5）；人民邮电出版社，2006
 + 数据库系统实现
@@ -87,23 +86,6 @@ https://github.com/Snailclimb/JavaGuide
 + 《从Paxos到Zookeeper》（推荐，豆瓣评分 7.8，0.3K人评价）《Java编程思想(第4版)》（推荐，豆瓣评分 9.1，3.2K+人评价）
 + 亿级流量网站架构核心技术
 + 企业IT架构转型之道：阿里巴巴中台战略思想与架构实战 （8.3，386人评价，强推）
-
-
-
-
-
-### log:
-
-
-#### 2019-03-06
-
-+ 归纳整理Java 多线程的相关知识
-
-
-
-
-参考：[【技术类】2019校招技术类岗位面经汇总](https://www.nowcoder.com/discuss/146655)
-
 
 
 
@@ -116,17 +98,6 @@ https://github.com/Snailclimb/JavaGuide
 + 不要相信任何应用：任何应用都可能崩溃，必要的时候做服务降级和限流，以保证核心业务可用。
 
 + 不要相信任何硬件：业务做跨机房部署，进行容灾。
-
-
-
-
-
-
-
-
-
-
-
 
 
 

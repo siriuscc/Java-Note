@@ -36,13 +36,71 @@ void CAS(void *memoryVar,int predictVar,int newVar){
         *memoryVar=newVar;
     }
 }
+
 ```
+
+
+
+### AtomicInteger 的实现原理
+
+```java
+public class AtomicInteger extends Number implements java.io.Serializable {
+
+    // setup to use Unsafe.compareAndSwapInt for updates
+    private static final Unsafe unsafe = Unsafe.getUnsafe();
+    private static final long valueOffset;
+
+    static {
+        try {
+            valueOffset = unsafe.objectFieldOffset
+                (AtomicInteger.class.getDeclaredField("value"));
+        } catch (Exception ex) { throw new Error(ex); }
+    }
+    // 对volatile保证可见性和禁止指令重排序
+    private volatile int value;
+    /**
+     * 原子性设置 value 然后返回老的值
+     */
+    public final int getAndSet(int newValue) {
+        // unsafe， this+valueOffset 得到value的内存地址，newValue由c语言写入
+        return unsafe.getAndSetInt(this, valueOffset, newValue);
+    }
+```
+
+
+```java
+public final class Unsafe {
+    public final int getAndAddInt(Object var1, long var2, int var4) {
+        int var5;
+        do {
+            var5 = this.getIntVolatile(var1, var2);
+        } while(!this.compareAndSwapInt(var1, var2, var5, var5 + var4));
+
+        return var5;
+    }
+    // native 方法，c语言实现
+    public final native boolean compareAndSwapInt(Object var1, long var2, int var4, int var5);
+
+}
+```
+
+Unsafe类是在sun.misc包下，不属于Java标准。但是很多Java的基础类库，包括一些被广泛使用的高性能开发库都是基于Unsafe类开发的，比如Netty、Cassandra、Hadoop、Kafka等。Unsafe类在提升Java运行效率，增强Java语言底层操作能力方面起了很大的作用。
+Unsafe类使Java拥有了像C语言的指针一样操作内存空间的能力，同时也带来了指针的问题。过度的使用Unsafe类会使得出错的几率变大，因此Java官方并不建议使用的，官方文档也几乎没有。
+
+
++ [AtomicInteger原理](https://www.cnblogs.com/scuwangjun/p/9098057.html)
+
+
+
 ## volatile 
+
 * 可见性
 	- 当一个线程修改变量后，新值对其他变量是可立即得知的
 		- 每次使用都必须重新从主内存装载
 		- 每次修改都必须立即写入主内存
 * 禁止指令重排序
+
++ volatile不等于线程安全
 
 
 ### volatile实战：线程安全的单例
@@ -77,7 +135,7 @@ public class Singleton {
 
 ### 悲观锁
 
-总是`假设最坏`的情况，每次去拿数据的时候都认为别人会修改，所以每次在拿数据的时候都会上锁，这样别人想拿这个数据就会阻塞直到它拿到锁（共享资源每次只给一个线程使用，其它线程阻塞，用完后再把资源转让给其它线程）。传统的关系型数据库里边就用到了很多这种锁机制，比如`行锁`，`表锁`等，`读锁`，`写锁`等，都是在做操作之前先上锁。Java中`synchronized`和`ReentrantLock`等独占锁就是悲观锁思想的实现。
+总是`假设最坏`的情况，每次去拿数据的时候都认为别人会修改，所以每次在拿数据的时候都会上锁，这样别人想拿这个数据就会阻塞直到它拿到锁（共享资源每次只给一个线程使用，其它线程阻塞，用完后再把资源转让给其它线程）。传统的关系型数据库里边就用到了很多这种锁机制，比如`行锁`，`表锁`等，`读锁`，`写锁`等，都是在做操作之前先上锁。Java中`synchronized`和`ReentrantLock`等独占锁就是悲观锁思想的实现。悲观锁适合`频繁写入`的场景。
 
 
 ### 乐观锁
@@ -96,6 +154,7 @@ public class Singleton {
 
 
 #### 版本号机制
+
 一般是在数据表中加上一个数据版本号version字段，表示数据被修改的次数，当数据被修改时，version值会加一。当线程A要更新数据值时，在读取数据的同时也会读取version值，在提交更新时，若刚才读取到的version值为当前数据库中的version值相等时才更新，否则重试更新操作，直到更新成功。
 
 
@@ -125,7 +184,7 @@ public class Singleton {
 ## AQS:AbstractQueuedSynchronizer
 
 
-+ 一个Java提高的底层同步工具类，用一个int类型的变量state表示同步状态，并提供了一系列的`CAS`操作来管理这个同步状态。
++ 一个Java提高的底层同步工具类，用一个int类型的变量state表示同步状态，并提供了一系列的`原子操作`来管理这个同步状态。
 
 
 AQS的主要作用是为Java中的并发同步组件提供统一的底层支持，例如`ReentrantLock`，`CountdowLatch`就是基于`AQS`实现的，用法是通过继承AQS实现其模版方法，然后将子类作为同步组件的内部类。
@@ -135,21 +194,44 @@ AQS的主要作用是为Java中的并发同步组件提供统一的底层支持�
 
 + 基于`FIFO`等待队列，提供一个框架来实现阻塞锁和相关的同步器(信号量semaphores，events）。
 + 此类基于一个 `volatile` 的`state`，被设计成多数同步类的一个`基础组件`
-+ 子类必须重写 改变state 的protected 方法，并且定义 获取和释放这个对象的`意义`。（AQS 并没有强制规定含义）
++ AQS 并没有强制规定state的含义，由派生类定义获取和释放这个对象的`意义`。
++ 派生类基于模板方法，实现指定方法：
 
+
+
+```java
+/** 
+ * 独占模式下尝试获取。如果state 对于对象而言表示可以在独占模式获取，则获取之。
+ */
+protected boolean tryAcquire(int arg);
+
+/**
+ * 尝试通过设置state，表示释放独占锁 
+ */
+protected boolean tryRelease(int arg);
+/**
+ * 尝试在共享模式下获取锁
+ */
+protected int tryAcquireShared(int arg);
+/**
+ * 尝试在共享模式下释放锁
+ */
+protected boolean tryReleaseShared(int arg);
+/**
+ * 是否线程独占
+ */
+protected boolean isHeldExclusively();
+```
 基于这些，该类的其他方法主要执行阻塞和排队的逻辑。
 
 
 子类可以维护其他的状态属性，但是只有 使用`getState` 和 `compareAndSetState` 原子地更新，才被视为同步。
 
-
 >  Subclasses should be defined as non-public internal helper classes that are used to implement the synchronization properties of their enclosing class.  Class {@code AbstractQueuedSynchronizer} does not implement any synchronization interface.  Instead it defines methods such as {@link #acquireInterruptibly} that can be invoked as appropriate by concrete locks and related synchronizers to implement their public methods.
 
 子类应该定义 不对外的内部子类，用它实现 封闭类的同步属性。AQS 没有实现任何同步接口。
 
-
-
-```java
+```java {.line-numbers}
 
 public abstract class AbstractQueuedSynchronizer
     extends AbstractOwnableSynchronizer
@@ -178,27 +260,272 @@ public abstract class AbstractQueuedSynchronizer
 ```
 
 
+### Semaphore：基于信号量的同步
 
++ 用于限制访问某些资源的线程数量，比如数据库连接；
++ 对state的操作基于CAS写入；
++ state的语义是 可用线程数；
++ Semaphore拿到执行权的线程之间有可能造成线程不安全；
+
+#### 源码分析：
+
+```java {.line-numbers}
+
+public class Semaphore implements java.io.Serializable {
+ abstract static class Sync extends AbstractQueuedSynchronizer {
+        private static final long serialVersionUID = 1192457210091910933L;
+
+        Sync(int permits) {
+            setState(permits);
+        }
+
+        final int getPermits() {
+            return getState();
+        }
+        /**
+         * 加锁方法
+         */
+        final int nonfairTryAcquireShared(int acquires) {
+            for (;;) {
+                // 获取当前可用的线程数量
+                int available = getState();
+                // 可用的减去需要的，不足则返回，否则CAS写入到state
+                int remaining = available - acquires;
+                if (remaining < 0 ||
+                    compareAndSetState(available, remaining))
+                    return remaining;
+            }
+        }
+        /**
+         * 解锁方法
+         */
+        protected final boolean tryReleaseShared(int releases) {
+            for (;;) {
+                int current = getState();
+                int next = current + releases;
+                if (next < current) // overflow
+                    throw new Error("Maximum permit count exceeded");
+                if (compareAndSetState(current, next))
+                    return true;
+            }
+        }
+    }
+}
+```
+
+
+
+
+#### 实战：献血车模型
+用Semaphore 实现献血车模型：十个志愿者排队献血，献血车只能同时上两个人，每次献血耗时2s。
+```java
+public class SemaphoreDemo {
+    public static void main(String[] args) throws InterruptedException {
+
+        // 互斥量为2，允许两个线程同时操作
+        Semaphore semaphore = new Semaphore(2);
+        ExecutorService pool = new ThreadPoolExecutor(10, 10, 0L, 
+                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(1024));
+        // 献血车来限制应该多少人同时献血
+        BloodVehicle bloodVehicle = new BloodVehicle(semaphore);
+        // 十个志愿者排队献血
+        for (int i = 0; i < 10; ++i) {
+            pool.submit(new Volunteer(bloodVehicle));
+        }
+        // 线程池等待所有任务执行完毕
+        pool.awaitTermination(20000, TimeUnit.MILLISECONDS);
+        pool.shutdown();
+        semaphore.release();
+    }
+
+    /**
+     * 献血车，一次只能上来两个人，每次献血需要2s
+     */
+    public static class BloodVehicle {
+        private Semaphore semaphore;
+        BloodVehicle(Semaphore semaphore) {
+            this.semaphore = semaphore;
+        }
+        public void donation() {
+            try {
+                semaphore.acquire();
+                System.out.println(Thread.currentThread().getName() + "志愿者开始献血");
+                Thread.sleep(2000);
+                System.out.println(Thread.currentThread().getName() + "志愿者结束献血");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                semaphore.release();
+            }
+        }
+    }
+
+    public static class Volunteer extends Thread {
+        private BloodVehicle vehicle;
+        Volunteer(BloodVehicle vehicle) {
+            this.vehicle = vehicle;
+        }
+        @Override
+        public void run() {
+            vehicle.donation();
+        }
+    }
+}
+```
+
+
+### CountdowLatch
+
++ 使一个线程等待其他线程完成各自的工作后再执行
++ state的语义是还需要等待多少个任务线程
+
+CountDownLatch是通过一个`计数器`来实现的，计数器的初始值为线程的数量。每当一个线程完成了自己的任务后，计数器的值就会减1。当计数器值到达0时，它表示所有的线程已经完成了任务，然后在闭锁上等待的线程就可以恢复执行任务。
+
+![](.images/Java里的锁/2019-03-25-10-34-07.png)
+
+#### 源码分析
+
+```java
+
+public class CountDownLatch {
+
+    public void countDown() {
+        sync.releaseShared(1);
+    }
+
+    /**
+     * Synchronization control For CountDownLatch.
+     * Uses AQS state to represent count.
+     */
+    private static final class Sync extends AbstractQueuedSynchronizer {
+        private static final long serialVersionUID = 4982264981922014374L;
+
+        Sync(int count) {
+            setState(count);// count 就是state
+        }
+
+        int getCount() {
+            return getState();
+        }
+
+        protected int tryAcquireShared(int acquires) {
+            return (getState() == 0) ? 1 : -1;
+        }
+        /**
+         * 尝试释放锁
+         */
+        protected boolean tryReleaseShared(int releases) {
+            // Decrement count; signal when transition to zero
+            for (;;) {
+                int c = getState();
+                if (c == 0)
+                    return false;
+                int nextc = c-1; // 减一操作
+                if (compareAndSetState(c, nextc))
+                    return nextc == 0;
+            }
+        }
+    }
+}
+
+
+{
+    /** 尝试释放共享锁
+     *
+     */
+    public final boolean releaseShared(int arg) {
+        if (tryReleaseShared(arg)) {
+            doReleaseShared();
+            return true;
+        }
+        return false;
+    }
+
+}
+
+````
+
+
+#### 实战：汇总子任务结果
+
+```java
+public class CountDownLatchDemo {
+
+    public static void main(String[] args) throws Exception {
+
+        CountDownLatch countDownLatch = new CountDownLatch(5);
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(10, 10, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(10));
+        ArrayList<Future<Integer>> futures = new ArrayList<>(10);
+
+        for (int i = 0; i < 10; ++i) {
+            futures.add(pool.submit(new SubWorker(countDownLatch)));
+        }
+        // 阻塞到所有任务完成
+        countDownLatch.await(10000, TimeUnit.MILLISECONDS);
+
+        int sum = 0;
+        for (int i = 0; i < futures.size(); ++i) {
+            // 通过task获取线程执行结果
+            sum += futures.get(i).get();
+        }
+        System.out.println("sum time:" + sum);
+    }
+
+    public static class SubWorker implements Callable<Integer> {
+        private CountDownLatch countDownLatch;
+        SubWorker(CountDownLatch countDownLatch) {
+            this.countDownLatch = countDownLatch;
+        }
+        @Override
+        public Integer call() throws Exception {
+
+            System.out.println(Thread.currentThread().getName() + ": 工作中");
+            Integer workTime = new Random().nextInt(1000);
+            try {
+                Thread.sleep(workTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                countDownLatch.countDown();
+            }
+            System.out.println(Thread.currentThread().getName() + ": 结束工作");
+            return workTime;
+        }
+    }
+}
+```
+
+### CyclicBarrier
+
+
+
++ CountDownLatch:一个线程(或者多个)，等待另外N个线程完成某个事情之后才能执行；CyclicBarrier:N个线程相互等待，任何一个线程完成之前，所有的线程都必须等待。
++ CountDownLatch:一次性的；CyclicBarrier:可以重复使用。
++ CountDownLatch基于AQS；CyclicBarrier基于锁和Condition。本质上都是依赖于volatile和CAS实现的。
+
+### Exchanger
+
+TODO: 待补充
 
 
 
 ## synchronized
 
-
 + `互斥同步`，对同一线程`可重入`
 + 涉及到阻塞和唤醒线程的系统调用，`系统变态`需要耗费CPU,属于`重量级操作`
-+ 由`JVM负责实现`，JVM 底层通过监视锁来实现synchronized,对应的字节码指令：monitorenter，monitorexit
++ 由`JVM负责实现`，JVM 底层通过监视锁来实现synchronized,对应的字节码指令：monitorenter，monitorexit，同步方法是采用标志
+
 
 
 监视锁： 对象的隐藏字段，线程进入同步方法或同步代码块时，线程会获取该方法或代码块所属对象的monitor,进行加锁判断。成功，则本线程称为 此monitor的唯一持有者，monitor在释放前不能被其他线程获取。
 
 
-
-$monitor==0$：线程可以持有monitor
-$monitor>0$ ：并且持有者是本线程，monitor++
-$monitor>0$ ：并且持有者不是本线程，等待锁。
++ $monitor==0$：线程可以持有monitor
++ $monitor>0$ ：并且持有者是本线程，monitor++
++ $monitor>0$ ：并且持有者不是本线程，等待锁。
 
 ```java
+//伪代码
 monitorenter(threadId){
     while(monitor!=0&&object.threadId!=threadId){
         //锁不是自己的
@@ -208,7 +535,7 @@ monitorenter(threadId){
         monitor=1;
         object.threadId=threadId;
     }else if(monitor!=0&&object.threadId==threadId){
-        //锁是自己的
+        //锁是自己的,重入
         monitor++;
     }
 }
@@ -296,7 +623,7 @@ Mark Word 有2bit 存储锁的状态：
 ![码出高效-Java开发手册，226配图](.images/Java里的锁/2019-03-05-14-18-55.png)
 
 ReentrantLock 实现Lock接口，组合了Sync，Sync继承自AQS, AQS中定义了volatile 类型的state。AQS.state在不同子类中具体用法不同。在ReetrantLock中，规则如下：
-```java
+```c {.line-numbers}
 // 算法伪代码
 lock(){
     if(state==0){
@@ -316,6 +643,348 @@ lock(){
 
 
 
++ 基于currentThread 和state，state的语义是独占线程的重入次数；
+
+
+
+```java
+
+
+public class ReentrantLock implements Lock, java.io.Serializable {
+
+
+    public ReentrantLock(boolean fair) {
+        //公平锁和非公平锁采用不同策略
+        sync = fair ? new FairSync() : new NonfairSync();
+    }
+
+    /**
+     * Base of synchronization control for this lock. Subclassed
+     * into fair and nonfair versions below. Uses AQS state to
+     * represent the number of holds on the lock.
+     */
+    abstract static class Sync extends AbstractQueuedSynchronizer {
+        private static final long serialVersionUID = -5179523762034025860L;
+
+        /**
+         * Performs {@link Lock#lock}. The main reason for subclassing
+         * is to allow fast path for nonfair version.
+         */
+        abstract void lock();
+
+        /** 
+         * Performs non-fair tryLock.  tryAcquire is implemented in
+         * subclasses, but both need nonfair try for trylock method.
+         */
+        final boolean nonfairTryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                //CAS设置进去
+                if (compareAndSetState(0, acquires)) {
+                    // 当前还没有被占，设置独占线程为当前线程
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }// 当前线程就是独占线程，可重入
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0) // 整型 溢出
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);// volatile设置
+                return true;
+            }
+            return false;
+        }
+
+        protected final boolean tryRelease(int releases) {
+            int c = getState() - releases;
+            if (Thread.currentThread() != getExclusiveOwnerThread())
+                throw new IllegalMonitorStateException();
+            boolean free = false;
+            if (c == 0) {
+                // 当前线程 的锁释放完毕，释放独占
+                free = true;
+                setExclusiveOwnerThread(null);
+            }
+            setState(c);
+            return free;
+        }
+
+    }
+
+
+    /**
+     * 非公平锁的策略类
+     */
+    static final class NonfairSync extends Sync {
+        /**
+         * Performs lock.  Try immediate barge, backing up to normal
+         * acquire on failure.
+         */
+        final void lock() {
+            if (compareAndSetState(0, 1))
+                setExclusiveOwnerThread(Thread.currentThread());
+            else
+                // CAS写入失败，走AQS的逻辑
+                acquire(1);
+        }
+
+        protected final boolean tryAcquire(int acquires) {
+            return nonfairTryAcquire(acquires);
+        }
+    }
+
+
+    /**
+     * 公平锁策略
+     */
+    static final class FairSync extends Sync {
+        
+        // 直接走AQS 的逻辑
+        final void lock() {
+            acquire(1);
+        }
+
+        /**
+         * Fair version of tryAcquire.  Don't grant access unless
+         * recursive call or no waiters or is first.
+         */
+        protected final boolean tryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                if (!hasQueuedPredecessors() &&
+                    compareAndSetState(0, acquires)) {
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0)
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            return false;
+        }
+    }
+
+}
+```
+
+
+```java
+    /**
+     * Acquires in exclusive mode, ignoring interrupts.  Implemented
+     * by invoking at least once {@link #tryAcquire},
+     * returning on success.  Otherwise the thread is queued, possibly
+     * repeatedly blocking and unblocking, invoking {@link
+     * #tryAcquire} until success.  This method can be used
+     * to implement method {@link Lock#lock}.
+     *
+     * @param arg the acquire argument.  This value is conveyed to
+     *        {@link #tryAcquire} but is otherwise uninterpreted and
+     *        can represent anything you like.
+     */
+    public final void acquire(int arg) {
+        /**
+         * tryAcquire 利用多态做模板方法，会调用回 FairSync或者 NotfairSync 的tryAcquire 方法
+         * 如果获取失败，加入等待队列，中断线程
+         * 
+         */
+        if (!tryAcquire(arg) &&
+            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+            selfInterrupt();
+    }
+
+
+
+    在独占不中断模式，线程真的在队列中，获取，
+
+    /**
+     * Acquires in exclusive uninterruptible mode for thread already in queue. Used by condition wait methods as well as acquire.
+     *
+     * @param node the node
+     * @param arg the acquire argument
+     * @return {@code true} if interrupted while waiting
+     */
+    final boolean acquireQueued(final Node node, int arg) {
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head && tryAcquire(arg)) {
+                    setHead(node);
+                    p.next = null; // help GC
+                    failed = false;
+                    return interrupted;
+                }
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    parkAndCheckInterrupt())
+                    interrupted = true;
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+```
+
+
+
+```java
+    static final class Node {
+        /** Marker to indicate a node is waiting in shared mode */
+        static final Node SHARED = new Node();
+        /** Marker to indicate a node is waiting in exclusive mode */
+        static final Node EXCLUSIVE = null;
+
+        /** waitStatus value to indicate thread has cancelled */
+        static final int CANCELLED =  1;
+        /** waitStatus value to indicate successor's thread needs unparking */
+        static final int SIGNAL    = -1;
+        /** waitStatus value to indicate thread is waiting on condition */
+        static final int CONDITION = -2;
+        /**
+         * waitStatus value to indicate the next acquireShared should
+         * unconditionally propagate
+         */
+        static final int PROPAGATE = -3;
+
+        /**
+         * Status field, taking on only the values:
+         *   SIGNAL:     The successor of this node is (or will soon be)
+         *               blocked (via park), so the current node must
+         *               unpark its successor when it releases or
+         *               cancels. To avoid races, acquire methods must
+         *               first indicate they need a signal,
+         *               then retry the atomic acquire, and then,
+         *               on failure, block.
+         *   CANCELLED:  This node is cancelled due to timeout or interrupt.
+         *               Nodes never leave this state. In particular,
+         *               a thread with cancelled node never again blocks.
+         *   CONDITION:  This node is currently on a condition queue.
+         *               It will not be used as a sync queue node
+         *               until transferred, at which time the status
+         *               will be set to 0. (Use of this value here has
+         *               nothing to do with the other uses of the
+         *               field, but simplifies mechanics.)
+         *   PROPAGATE:  A releaseShared should be propagated to other
+         *               nodes. This is set (for head node only) in
+         *               doReleaseShared to ensure propagation
+         *               continues, even if other operations have
+         *               since intervened.
+         *   0:          None of the above
+         *
+         * The values are arranged numerically to simplify use.
+         * Non-negative values mean that a node doesn't need to
+         * signal. So, most code doesn't need to check for particular
+         * values, just for sign.
+         *
+         * The field is initialized to 0 for normal sync nodes, and
+         * CONDITION for condition nodes.  It is modified using CAS
+         * (or when possible, unconditional volatile writes).
+         */
+        volatile int waitStatus;
+
+        /**
+         * Link to predecessor node that current node/thread relies on
+         * for checking waitStatus. Assigned during enqueuing, and nulled
+         * out (for sake of GC) only upon dequeuing.  Also, upon
+         * cancellation of a predecessor, we short-circuit while
+         * finding a non-cancelled one, which will always exist
+         * because the head node is never cancelled: A node becomes
+         * head only as a result of successful acquire. A
+         * cancelled thread never succeeds in acquiring, and a thread only
+         * cancels itself, not any other node.
+         */
+        volatile Node prev;
+
+        /**
+         * Link to the successor node that the current node/thread
+         * unparks upon release. Assigned during enqueuing, adjusted
+         * when bypassing cancelled predecessors, and nulled out (for
+         * sake of GC) when dequeued.  The enq operation does not
+         * assign next field of a predecessor until after attachment,
+         * so seeing a null next field does not necessarily mean that
+         * node is at end of queue. However, if a next field appears
+         * to be null, we can scan prev's from the tail to
+         * double-check.  The next field of cancelled nodes is set to
+         * point to the node itself instead of null, to make life
+         * easier for isOnSyncQueue.
+         */
+        volatile Node next;
+
+        /**
+         * The thread that enqueued this node.  Initialized on
+         * construction and nulled out after use.
+         */
+        volatile Thread thread;
+
+        /**
+         * Link to next node waiting on condition, or the special
+         * value SHARED.  Because condition queues are accessed only
+         * when holding in exclusive mode, we just need a simple
+         * linked queue to hold nodes while they are waiting on
+         * conditions. They are then transferred to the queue to
+         * re-acquire. And because conditions can only be exclusive,
+         * we save a field by using special value to indicate shared
+         * mode.
+         */
+        Node nextWaiter;
+
+        /**
+         * Returns true if node is waiting in shared mode.
+         */
+        final boolean isShared() {
+            return nextWaiter == SHARED;
+        }
+
+        /**
+         * Returns previous node, or throws NullPointerException if null.
+         * Use when predecessor cannot be null.  The null check could
+         * be elided, but is present to help the VM.
+         *
+         * @return the predecessor of this node
+         */
+        final Node predecessor() throws NullPointerException {
+            Node p = prev;
+            if (p == null)
+                throw new NullPointerException();
+            else
+                return p;
+        }
+
+        Node() {    // Used to establish initial head or SHARED marker
+        }
+
+        Node(Thread thread, Node mode) {     // Used by addWaiter
+            this.nextWaiter = mode;
+            this.thread = thread;
+        }
+
+        Node(Thread thread, int waitStatus) { // Used by Condition
+            this.waitStatus = waitStatus;
+            this.thread = thread;
+        }
+    }
+```
+
+
++ 非公平锁，如果当前不存在独占，马上CAS获取锁，当前线程为独占线程；
++ 公平锁，如果当前不存在独占，走AQS的逻辑，尝试获取锁，获取不到就加入队列
+
+
+
+
+
+
+
+
+
 
 ### 实例：ReentrantLock 公平锁
 
@@ -327,8 +996,13 @@ lock(){
 ```
 
 
+### ReentrantReadWriteLock:可重入读写锁
 
-## synchronized和ReentrantLock 比较
+
+
+
+
+### synchronized和ReentrantLock 比较
 
 + 对象：
     + synchronized: 单锁，一次锁一个，嵌套锁来实现复合锁容易导致死锁
@@ -346,384 +1020,11 @@ lock(){
     + 大多数情况下，应当优先考虑synchronized
 
 
+### ReadWriteLock
 
+ReadWriteLock读写之间互斥吗
 
++ 读读不互斥，其他都互斥
 
-## 分布式环境下的锁
 
 
-### CAP原则
-> 任何一个分布式系统都无法同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance），最多只能同时满足两项。
-
-+ 一致性（C）：在分布式系统中的所有数据备份，在同一时刻是否同样的值。（等同于所有节点访问同一份最新的数据副本）
-+ 可用性（A）：在集群中一部分节点故障后，集群整体是否还能响应客户端的读写请求。（对数据更新具备高可用性）
-+ 分区容错性（P）：以实际效果而言，分区相当于对通信的时限要求。系统如果不能在时限内达成数据一致性，就意味着发生了分区的情况，必须就当前操作在C和A之间做出选择。
-
-在互联网领域的绝大多数的场景中，都需要牺牲强一致性来换取系统的高可用性，系统往往只需要保证最终一致性。
-
-
-
-### 分布式锁
-
-+ 当在分布式模型下，数据只有一份（或有限制），此时需要利用锁的技术控制某一时刻修改数据的进程数。
-
-+ 与单机模式下的锁不仅需要保证进程可见，还需要考虑进程与锁之间的`网络问题`。（网络的延时和不可靠）
-
-+ 分布式锁还是可以将标记存在内存，只是该内存不是某个进程分配的内存而是`公共内存`如 Redis、Memcache。至于利用数据库、文件等做锁与单机的实现是一样的，只要保证标记能互斥就行。
-
-
-### 分布式锁的要求
-
-+ 可以保证在分布式部署的应用集群中，`至多只有一个线程拥有锁`。
-+ 锁应该是`可重入的`
-+ 公平锁和阻塞锁的实现是有必要的
-+ 获取锁和释放锁是高可用的
-
-
-
-### 基于数据库做分布式锁
-
-
-+ 基于表主键唯一做分布式锁
-+ 基于表字段版本号做分布式锁
-+ 基于数据库排他锁做分布式锁
-
-
-优点：简单，易于理解；
-缺点：操作数据库的开销需要考虑
-
-### 基于 Redis 的分布式锁
-
-
-
-#### 基于 SETNX、EXPIRE方法
-
-+ setnx(key,value)： SET if Not Exists，该方法是原子的，如果 key 不存在，则设置当前 key 成功，返回 1；如果当前 key 已经存在，则设置当前 key 失败，返回 0。这里不能设置超时时间。
-
-
-+ expire()： 设置超时时间，避免死锁
-
-加锁步骤：
-1. setnx(lockkey, 1) 如果返回 0，则说明占位失败；如果返回 1，则说明占位成功
-2. expire() 命令对 lockkey 设置超时时间，为的是避免死锁问题。
-3. 执行完业务代码后，可以通过 delete 命令删除 key。
-
-bug:1-2 之间出现客户端宕机，导致死锁。
-
-```java
-    /**
-     * 加锁
-     * @param key redis key
-     * @param expire 过期时间，单位秒
-     * @return true:加锁成功，false，加锁失败
-     */
-    public static boolean lock(String key, int expire) {
-
-        RedisService redisService = SpringUtils.getBean(RedisService.class);
-        long status = redisService.setnx(key, "1");
-
-        if(status == 1) {
-            redisService.expire(key, expire);
-            return true;
-        }
-
-        return false;
-    }
-    public static void unLock1(String key) {
-        RedisService redisService = SpringUtils.getBean(RedisService.class);
-        redisService.del(key);
-    }
-```
-
-
-### 基于 REDIS 的 SETNX、GET、GETSET方法
-
-
-getset(key，value): 先get后set，
-
-
-1. setnx(lockkey, value=current+timeout)，如果返回 1，则获取锁成功；如果返回 0 则没有获取到锁。
-2. get(lockkey) 获取值 oldExpireTime ，并将这个 value 值与当前的系统时间进行比较，如果小于当前系统时间，则认为这个锁已经超时，可以允许别的请求重新获取。
-3. 计算 newExpireTime = current+timeout，getset(lockkey, newExpireTime) 会返回当前 lockkey 的值currentExpireTime。
-4. 判断 currentExpireTime 与 oldExpireTime 是否相等，如果相等，说明当前 getset 设置成功，获取到了锁。如果不相等，说明这个锁又被别的请求获取走了，那么当前请求可以直接返回失败，或者继续重试。
-5. 在获取到锁之后，当前线程可以开始自己的业务处理，当处理完毕后，比较自己的处理时间和对于锁设置的超时时间，如果小于锁设置的超时时间，则直接执行 delete 释放锁；如果大于锁设置的超时时间，则不需要再锁进行处理。
-
-```java
-    /**
-     * 加锁
-     * @param key redis key
-     * @param expire 过期时间，单位秒
-     * @return true:加锁成功，false，加锁失败
-     */
-    public static boolean lock2(String key, int expire) {
-
-        RedisService redisService = SpringUtils.getBean(RedisService.class);
-
-        long value = System.currentTimeMillis() + expire;
-        long status = redisService.setnx(key, String.valueOf(value));
-
-        if(status == 1) {
-            return true;
-        }
-        long oldExpireTime = Long.parseLong(redisService.get(key, "0"));
-        if(oldExpireTime < System.currentTimeMillis()) {
-            //超时
-            long newExpireTime = System.currentTimeMillis() + expire;
-            long currentExpireTime = Long.parseLong(redisService.getSet(key, String.valueOf(newExpireTime)));
-            if(currentExpireTime == oldExpireTime) {
-                return true;
-            }
-        }
-        return false;
-    }
-    public static void unLock2(String key) {    
-        RedisService redisService = SpringUtils.getBean(RedisService.class);    
-        long oldExpireTime = Long.parseLong(redisService.get(key, "0"));   
-        if(oldExpireTime > System.currentTimeMillis()) {        
-            redisService.del(key);    
-        }
-   }
-```
-
-
-
-
-#### 基于 REDLOCK 的分布式锁
-
-
-Redlock 是 Redis 的作者 antirez 给出的集群模式的 Redis 分布式锁，它基于 N 个完全独立的 Redis 节点（N%2=1）。
-
-1. 客户端获取当前时间，以毫秒为单位。
-2. 客户端尝试获取 N 个节点的锁，（每个节点获取锁的方式和前面说的缓存锁一样），N 个节点以相同的 key 和 value 获取锁。客户端需要设置接口访问超时，接口超时时间需要远远小于锁超时时间，比如锁自动释放的时间是 10s，那么接口超时大概设置 5-50ms。这样可以在有 redis 节点宕机后，访问该节点时能尽快超时，而减小锁的正常使用。
-3. 客户端计算在获得锁的时候花费了多少时间，方法是用当前时间减去在步骤一获取的时间，只有客户端获得了超过 半数个节点的锁，而且获取锁的时间小于锁的超时时间，客户端才获得了分布式锁。
-4. 客户端获取的锁的时间为设置的锁超时时间减去3计算出的获取锁花费时间。
-5. 如果客户端获取锁失败了，客户端会依次删除所有的锁。
-
-
-使用 Redlock 算法，可以保证在挂掉最多不超过半数个节点的时候，分布式锁服务仍然能工作，这相比之前的数据库锁和缓存锁大大提高了可用性，由于 redis 的高效性能，分布式缓存锁性能并不比数据库锁差。
-
-
-优点： 性能高
-缺点：
-
-失效时间设置多长时间为好？如何设置的失效时间太短，方法没等执行完，锁就自动释放了，那么就会产生并发问题。如果设置的时间太长，其他获取锁的线程就可能要平白的多等一段时间。
-
-
-
-#### 基于 REDISSON
-
-redisson 是 redis 官方的分布式锁组件。GitHub 地址：https://github.com/redisson/redisson
-
-上面的这个问题 ——> 失效时间设置多长时间为好？这个问题在 redisson 的做法是：每获得一个锁时，只设置一个很短的超时时间，同时起一个线程在每次快要到超时时间时去刷新锁的超时时间。在释放锁的同时结束这个线程。
-
-
-性能、崩溃恢复和 fsync:
-
-如果我们的节点没有持久化机制，client 从 5 个 master 中的 3 个处获得了锁，然后其中一个重启了，这是注意 整个环境中又出现了 3 个 master 可供另一个 client 申请同一把锁！ 违反了互斥性。如果我们开启了 AOF 持久化那么情况会稍微好转一些，因为 Redis 的过期机制是语义层面实现的，所以在 server 挂了的时候时间依旧在流逝，重启之后锁状态不会受到污染。但是考虑断电之后呢，AOF部分命令没来得及刷回磁盘直接丢失了，除非我们配置刷回策略为 fsnyc = always，但这会损伤性能。解决这个问题的方法是，当一个节点重启之后，我们规定在 max TTL 期间它是不可用的，这样它就不会干扰原本已经申请到的锁，等到它 crash 前的那部分锁都过期了，环境不存在历史锁了，那么再把这个节点加进来正常工作。
-
-
-
-[Redlock分布式锁](https://mp.weixin.qq.com/s/TEbeP2wgKSehsfqY1bZEMw)
-
-
-
-### 基于 ZooKeeper 的分布式锁
-
-ZOOKEEPER 锁相关基础知识：
-
-+ zk 一般由多个节点构成（单数），采用 zab 一致性协议。因此可以将 zk 看成一个单点结构，对其修改数据其内部自动将所有节点数据进行修改而后才提供查询服务。
-+ zk 的数据以目录树的形式，每个目录称为 znode， znode 中可存储数据（一般不超过 1M），还可以在其中增加子节点。
-+ 子节点有三种类型。序列化节点，每在该节点下增加一个节点自动给该节点的名称上自增。临时节点，一旦创建这个 znode 的客户端与服务器失去联系，这个 znode 也将自动删除。最后就是普通节点。
-+ Watch 机制，client 可以监控每个节点的变化，当产生变化会给 client 产生一个事件。
-
-
-#### ZK 基本锁
-
-原理：利用`临时节点`与 `watch 机制`。每个锁占用一个普通节点 /lock，当需要获取锁时在 /lock 目录下创建一个临时节点，创建成功则表示获取锁成功，失败则 watch/lock 节点，有删除操作后再去争锁。临时节点好处在于当进程挂掉后能自动上锁的节点自动删除即取消锁。
-
-缺点：所有取锁失败的进程都监听父节点，很容易发生羊群效应，即当释放锁后所有等待进程一起来创建节点，并发量很大。
-
-#### ZK 锁优化
-
-原理：上锁改为创建临时有序节点，每个上锁的节点均能创建节点成功，只是其序号不同。只有序号最小的可以拥有锁，如果这个节点序号不是最小的则 watch 序号比本身小的前一个节点 (公平锁)。
-步骤：
-1. 在 /lock 节点下创建一个有序临时节点 (EPHEMERAL_SEQUENTIAL)。
-2. 判断创建的节点序号是否最小，如果是`最小则获取锁成功`。不是则取锁失败，然后 watch 序号比本身小的前一个节点。
-3. 当取锁失败，设置 watch 后则等待 watch 事件到来后，再次判断是否序号最小。
-4. 取锁成功则执行代码，最后释放锁（删除该节点）。
-
-
-```java
-public class DistributedLock implements Lock, Watcher{
-    private ZooKeeper zk;
-    private String root = "/locks";//根
-    private String lockName;//竞争资源的标志
-    private String waitNode;//等待前一个锁
-    private String myZnode;//当前锁
-    private CountDownLatch latch;//计数器
-    private int sessionTimeout = 30000;
-    private List<Exception> exception = new ArrayList<Exception>();
-
-    /**
-     * 创建分布式锁,使用前请确认config配置的zookeeper服务可用
-     * @param config 127.0.0.1:2181
-     * @param lockName 竞争资源标志,lockName中不能包含单词lock
-     */
-    public DistributedLock(String config, String lockName){
-        this.lockName = lockName;
-        // 创建一个与服务器的连接
-        try {
-            zk = new ZooKeeper(config, sessionTimeout, this);
-            Stat stat = zk.exists(root, false);
-            if(stat == null){
-                // 创建根节点
-                zk.create(root, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
-            }
-        } catch (IOException e) {
-            exception.add(e);
-        } catch (KeeperException e) {
-            exception.add(e);
-        } catch (InterruptedException e) {
-            exception.add(e);
-        }
-    }
-
-    /**
-     * zookeeper节点的监视器
-     */
-    public void process(WatchedEvent event) {
-        if(this.latch != null) {
-            this.latch.countDown();
-        }
-    }
-
-    public void lock() {
-        if(exception.size() > 0){
-            throw new LockException(exception.get(0));
-        }
-        try {
-            if(this.tryLock()){
-                System.out.println("Thread " + Thread.currentThread().getId() + " " +myZnode + " get lock true");
-                return;
-            }
-            else{
-                waitForLock(waitNode, sessionTimeout);//等待锁
-            }
-        } catch (KeeperException e) {
-            throw new LockException(e);
-        } catch (InterruptedException e) {
-            throw new LockException(e);
-        }
-    }
-
-    public boolean tryLock() {
-        try {
-            String splitStr = "_lock_";
-            if(lockName.contains(splitStr))
-                throw new LockException("lockName can not contains \\u000B");
-            //创建临时子节点
-            myZnode = zk.create(root + "/" + lockName + splitStr, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.EPHEMERAL_SEQUENTIAL);
-            System.out.println(myZnode + " is created ");
-            //取出所有子节点
-            List<String> subNodes = zk.getChildren(root, false);
-            //取出所有lockName的锁
-            List<String> lockObjNodes = new ArrayList<String>();
-            for (String node : subNodes) {
-                String _node = node.split(splitStr)[0];
-                if(_node.equals(lockName)){
-                    lockObjNodes.add(node);
-                }
-            }
-            Collections.sort(lockObjNodes);
-            System.out.println(myZnode + "==" + lockObjNodes.get(0));
-            if(myZnode.equals(root+"/"+lockObjNodes.get(0))){
-                //如果是最小的节点,则表示取得锁
-                return true;
-            }
-            //如果不是最小的节点，找到比自己小1的节点
-            String subMyZnode = myZnode.substring(myZnode.lastIndexOf("/") + 1);
-            waitNode = lockObjNodes.get(Collections.binarySearch(lockObjNodes, subMyZnode) - 1);
-        } catch (KeeperException e) {
-            throw new LockException(e);
-        } catch (InterruptedException e) {
-            throw new LockException(e);
-        }
-        return false;
-    }
-
-    public boolean tryLock(long time, TimeUnit unit) {
-        try {
-            if(this.tryLock()){
-                return true;
-            }
-            return waitForLock(waitNode,time);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    private boolean waitForLock(String lower, long waitTime) throws InterruptedException, KeeperException {
-        Stat stat = zk.exists(root + "/" + lower,true);
-        //判断比自己小一个数的节点是否存在,如果不存在则无需等待锁,同时注册监听
-        if(stat != null){
-            System.out.println("Thread " + Thread.currentThread().getId() + " waiting for " + root + "/" + lower);
-            this.latch = new CountDownLatch(1);
-            this.latch.await(waitTime, TimeUnit.MILLISECONDS);
-            this.latch = null;
-        }
-        return true;
-    }
-
-    public void unlock() {
-        try {
-            System.out.println("unlock " + myZnode);
-            zk.delete(myZnode,-1);
-            myZnode = null;
-            zk.close();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (KeeperException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void lockInterruptibly() throws InterruptedException {
-        this.lock();
-    }
-
-    public Condition newCondition() {
-        return null;
-    }
-
-    public class LockException extends RuntimeException {
-        private static final long serialVersionUID = 1L;
-        public LockException(String e){
-            super(e);
-        }
-        public LockException(Exception e){
-            super(e);
-        }
-    }
-}
-```
-
-优点：
-有效的解决单点问题，不可重入问题，非阻塞问题以及锁无法释放的问题。实现起来较为简单。
-
-缺点：
-性能上可能并没有缓存服务那么高，因为每次在创建锁和释放锁的过程中，都要动态创建、销毁临时节点来实现锁功能。ZK 中创建和删除节点只能通过 Leader 服务器来执行，然后将数据同步到所有的 Follower 机器上。还需要对 ZK的原理有所了解。
-
-
-
-### 基于 Consul 做分布式锁
-
-DD 写过类似文章，其实主要利用 Consul 的 Key / Value 存储 API 中的 acquire 和 release 操作来实现。
-
-> Consul is a distributed service mesh to connect, secure, and configure services across any runtime platform and public or private cloud
-
-
-参考:
-
-+ [基于Consul的分布式锁实现](http://blog.didispace.com/spring-cloud-consul-lock-and-semphore/)
-+ [Java分布式锁看这篇就够了](https://www.cnblogs.com/seesun2012/p/9214653.html)
