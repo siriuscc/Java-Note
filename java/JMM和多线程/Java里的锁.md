@@ -83,14 +83,28 @@ public final class Unsafe {
 
 }
 ```
-
-Unsafe类是在sun.misc包下，不属于Java标准。但是很多Java的基础类库，包括一些被广泛使用的高性能开发库都是基于Unsafe类开发的，比如Netty、Cassandra、Hadoop、Kafka等。Unsafe类在提升Java运行效率，增强Java语言底层操作能力方面起了很大的作用。
-Unsafe类使Java拥有了像C语言的指针一样操作内存空间的能力，同时也带来了指针的问题。过度的使用Unsafe类会使得出错的几率变大，因此Java官方并不建议使用的，官方文档也几乎没有。
-
-
 + [AtomicInteger原理](https://www.cnblogs.com/scuwangjun/p/9098057.html)
 
 
+### Unsafe类
+
+Unsafe类是在sun.misc包下，不属于Java标准。但是很多Java的基础类库，包括一些被广泛使用的高性能开发库都是基于Unsafe类开发的，比如Netty、Cassandra、Hadoop、Kafka等。Unsafe类在提升Java运行效率，增强Java语言底层操作能力方面起了很大的作用。
+Unsafe类使Java拥有了像C语言的指针一样操作内存空间的能力，同时也带来了指针的问题。过度的使用Unsafe类会使得出错的机率变大，因此Java官方并不建议使用的，官方文档也几乎没有。
+
+
+Unsafe类提供了以下这些功能：
+
+1. 内存管理。包括分配内存、释放内存等。
+2. 非常规的对象实例化。allocateInstance()直接生成对象；
+3. 操作类、对象、变量;
+4. 数组操作;
+5. 多线程同步。包括锁机制、CAS操作等;
+6. 挂起与恢复:park、unpark;
+7. 内存屏障。loadFence、storeFence、fullFence等方法,用于定义内存屏障，避免代码重排序
+
+参考：
+
++ [说一说Java的Unsafe类](https://www.cnblogs.com/pkufork/p/java_unsafe.html)
 
 ## volatile 
 

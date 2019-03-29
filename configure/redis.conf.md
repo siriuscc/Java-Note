@@ -110,17 +110,6 @@ requirepass 密码
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 mirrors.aliyun.com
 http://mirrors.cloud.aliyun.com/
 

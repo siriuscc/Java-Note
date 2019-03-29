@@ -23,6 +23,14 @@ Apache Dubbo
 
 ![](.images/dubbo/2019-03-12-14-25-47.png)
 
+### Dubbo和Spring Cloud
+
++ Spring Cloud功能上是Dubbo的超集，Dubbo只实现服务治理，其他如服务网关，分布式配置，批量任务等，需要嵌入其他工具来实现
+
+
++ 通信协议：
+    + Dubbo 支持多种通信协议，默认采用Dubbo，长连接短报文，通信速度上略胜 Spring Cloud。
+    + Spring Cloud默认rest通信
 
 ## dubbo架构
 
