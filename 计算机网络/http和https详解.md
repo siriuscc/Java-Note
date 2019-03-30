@@ -1,5 +1,114 @@
 [TOC]
 
+ 
+
+
+## HTTP ：超文本传输协议
+
++ Http是面向事务的应用层协议；
++ HTTP采用TCP作为传输层协议，保证了数据的可靠性。但是HTTP本身是无连接的。通信的双方在交换HTTP报文之前不需要先建立HTTP连接。
+
++ HTTP是面向文本的，报文中每一个字段都是一些ACSII码字符串，因此每个字段的长度都是不确定的。
+
+
+
+### 请求头
+
+HTTP协议常见头
+
+
+```
+GET / HTTP/1.1
+Host: www.baidu.com
+Connection: keep-alive
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
+Referer: https://www.baidu.com/s?ie=utf-8&wd=thinking%20brain
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: BAIDUID=7F6232F5D4402ABA1E2EB08CD428CF8D:FG=1;
+```
+
+
+Accept：接受的MIME类型
+Accept-Encoding：接受的编码
+Host：当前域名
+User-Agent：用户代理标识，也就是浏览器标识
+Referer：前一个页面的地址
+Cache-Control：缓存控制
+
+
+### 常用非标准请求头字段：
+
+#### X-Requested-With: XMLHttpRequest
+X-Requested-With 标识Ajax请求，大部分js框架发送请求时都会设置它为XMLHttpRequest
+
+#### X-Forwarded-For 
+```
+X-Forwarded-For: client1, proxy1, proxy2
+X-Forwarded-For: 129.78.138.66, 129.78.64.103
+```
+
+一个事实标准，用来标识客户端通过HTTP代理或者负载均衡器连接的web服务器的原始IP地址
+
+
+#### X-Forwarded-Host 
+
+一个事实标准，用来标识客户端在HTTP请求头中请求的原始host,因为主机名或者反向代理的端口可能与处理请求的原始服务器不同
+
+```
+X-Forwarded-Host: en.wikipedia.org:8080
+X-Forwarded-Host: en.wikipedia.org
+```
+
+
+### 响应头
+
+```
+HTTP/1.1 200 OK
+Bdpagetype: 2
+Bdqid: 0xfc1e34560011ed7c
+Cache-Control: private
+Connection: Keep-Alive
+Content-Encoding: gzip
+Content-Type: text/html;charset=utf-8
+Date: Fri, 29 Mar 2019 12:26:58 GMT
+Expires: Fri, 29 Mar 2019 12:26:58 GMT
+Server: BWS/1.1
+Set-Cookie: BDSVRTM=67; path=/
+Set-Cookie: BD_HOME=1; path=/
+Set-Cookie: H_PS_PSSID=1427_21101_28771_28722_28557_28697_28584_26350_28519_22160; path=/; domain=.baidu.com
+Strict-Transport-Security: max-age=172800
+X-Ua-Compatible: IE=Edge,chrome=1
+Transfer-Encoding: chunked
+```
+
+Date：消息发送的日期和时间
+Expires：响应体的过期时间
+
+
+
+Access-Control-Allow-Origin： 指定哪些站点可以参与跨站资源共享
+```
+	Access-Control-Allow-Origin: *
+```
+
+
+
+Cache-Control 告诉服务端到客户端所有的缓存机制是否可以缓存这个对象，单位是秒
+```
+Cache-Control: max-age=3600
+```
+
+Set-Cookie 设置HTTP Cookie
+```
+Set-Cookie: UserID=JohnDoe; Max-Age=3600; Version=1
+```
+
+参考：
++ [前端必备HTTP技能之HTTP请求头响应头中常用字段详解](https://www.cnblogs.com/chunlei36/p/6927365.html)
 
 ### Http1.0和Http1.1 的区别
 
@@ -107,4 +216,5 @@ https 可以分为两个步骤：
 	+ 使用对称加密算法 通信
 
 
-参考：[看完还不懂HTTPS我直播吃翔](https://zhuanlan.zhihu.com/p/25976060)
+参考：
++ [看完还不懂HTTPS我直播吃翔](https://zhuanlan.zhihu.com/p/25976060)
