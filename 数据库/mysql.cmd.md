@@ -1,3 +1,70 @@
+[TOC]
+
+
+
+下载Mysql官方的测试库：
+
+```bash
+> wget https://github.com/datacharmer/test_db/archive/master.zip
+...
+
+> unzip unzip master.zip
+> cd test_db-master/
+
+# 在test_db-master 中添加会话有效的 引擎设置
+#    SET  default_storage_engine=InnoDB;
+
+> mysql  -uroot -p -t < employees.sql
+```
+
+
+
+
+```sql
+CREATE TABLE `person` (
+  `id` bigint(20) unsigned NOT NULL,
+  `fname` varchar(100) NOT NULL,
+  `lname` varchar(100) NOT NULL,
+  `age` tinyint(3) unsigned NOT NULL,
+  `sex` tinyint(1) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=Innodb DEFAULT CHARSET=utf8
+
+
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `generate`(IN num INT)
+BEGIN   
+	DECLARE chars varchar(100) DEFAULT 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	DECLARE fname VARCHAR(25) DEFAULT '';
+	DECLARE lname VARCHAR(25) DEFAULT '';
+	DECLARE id int UNSIGNED;
+	DECLARE len int;
+	set id=1;
+	DELETE from person;
+	WHILE id <= num DO
+		set len = FLOOR(1 + RAND()*25);
+		set fname = '';
+		WHILE len > 0 DO
+			SET fname = CONCAT(fname,substring(chars,FLOOR(1 + RAND()*62),1));
+			SET len = len - 1;
+		END WHILE;
+		set len = FLOOR(1+RAND()*25);
+		set lname = '';
+		WHILE len > 0 DO
+			SET lname = CONCAT(fname,SUBSTR(chars,FLOOR(1 + RAND()*62),1));
+			SET len = len - 1;
+		END WHILE;
+		INSERT into person VALUES (id,fname,lname, FLOOR(RAND()*100), FLOOR(RAND()*2));
+		set id = id + 1;
+	END WHILE;
+END
+
+
+
+
+
+```
+
 
 
 
@@ -27,36 +94,21 @@ show variables like '%slow_query_log%'
 -- 开启慢查询
 set global slow_query_log=1;
 
+-- 查看当前支持的引擎
+show engines;
+-- 查看当前的默认引擎
+show variables like '%storage_engine%';
+--修改表引擎,这里不需要用到
+alter table table_name engine=innodb;  
+
+-- 修改默认存储引擎
+-- 设置InnoDB为默认引擎：在配置文件my.cnf中的 [mysqld] 下面加入default-storage-engine=INNODB 一句，保存。
+-- 设置本次会话默认存储引擎
+SET  default_storage_engine=InnoDB;
 ```
 ### 数据库常用的操作
 
 增删改查，手写
-
-### SQL JOINS
-
-
-![](.images/mysql.cmd/2019-03-07-15-52-49.png)
-+ inner join
-
-+ left join
-+ right join
-+ full join
-
-
-+ UNION 与 UNION ALL:
-```sql
--- A 表和B表 在name 字段 唯一化 的所有数据，也就是所有A.name 加B.name 不重复
-SELECT name FROM TableA UNION SELECT name FROM TableB
-
--- A.name +B.name 可以重复
-SELECT name FROM TableA UNION ALL SELECT name FROM TableB
-
-```
-
-参考： [图解SQL的inner join、left join、right join、full outer join、union、union all的区别](https://www.cnblogs.com/logon/p/3748020.html)
-
-
-
 
 
 ### sql时间
@@ -151,3 +203,17 @@ Heap表是什么？
 + HEAP表不支持AUTO_INCREMENT
 + 索引不可为NULL
 
+
+
+
+### timestamp 和datatime
+
+TIMESTAMP和DATETIME的相同点：
+
++ 两者都可用来表示YYYY-MM-DD HH:MM:SS[.fraction]类型的日期。
+
+TIMESTAMP和DATETIME的不同点：
+
++ 两者的存储方式不一样
+对于TIMESTAMP，它把客户端插入的时间从当前时区转化为UTC（世界标准时间）进行存储。查询时，将其又转化为客户端当前时区进行返回。
+而对于DATETIME，不做任何改变，基本上是原样输入和输出。
