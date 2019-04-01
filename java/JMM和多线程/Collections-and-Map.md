@@ -171,7 +171,7 @@ capacity: 总容量
 JDK1.7 下：
 
 + 高并发下，HashMap将导致`死链`，耗尽CPU
-    + 主要原因：transfer方法，多线程对 老table 的entry.next 的并发修改
+    + 主要原因：transfer方法，多线程对 老table 的entry.next 的并发修改，头插法
 + 高并发下,HashMap 容易`丢失数据`，主要就是 存在不同的数据版本
     + 并发赋值时被覆盖
     + 已遍历区间新增元素会丢失

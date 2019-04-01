@@ -453,7 +453,7 @@ It is interesting to note that the user time reported is a lot smaller than cloc
 
 #### Phase 5: Final Remark
 
-最后一次stop-the-world.目标是标记老年代所有存活对象。前面的Concurrent Preclean是并发的，并不能保证赶得上应用程序对引用的变更速度，所以一次必要的stop-the-world可以结束这种不确定状态。
+最后一次stop-the-world。目标是标记老年代所有存活对象。前面的Concurrent Preclean是并发的，并不能保证赶得上应用程序对引用的变更速度，所以一次必要的stop-the-world可以结束这种不确定状态。
 
 经常的，CMS尽量在年轻代尽量为空的情况下进行，以避免两次stop-the-world接踵而至。（响应时间优先）
 

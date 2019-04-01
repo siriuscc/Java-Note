@@ -1,17 +1,121 @@
+## Reflection: 反射
+
 [TOC]
 
 
-## Reflection
 
 
-反射 (Reflection) 是 Java 的特征之一，它允许运行中的 Java 程序获取自身的信息，并且可以操作类或对象的内部属性。
+
+
+反射 (Reflection) 是 Java 的特征之一，它允许`运行中`的 Java 程序获取自身的信息，并且可以操作类或对象的内部属性。
 
 > Reflection enables Java code to `discover information about the fields, methods and constructors` of loaded classes, and to use reflected fields, methods, and constructors to operate on their underlying counterparts, within security restrictions.
 The API accommodates applications that need access to either the public members of a target object (based on its runtime class) or the members declared by a given class. It also allows programs to suppress default reflective access control.
 
+### SoftReference：
+假设一个对象仅仅具有软引用，则内存空间足够，垃圾回收器就不会回收它；假设内存空间不足了，就会回收这些对象的内存。仅仅要垃圾回收器没有回收它，该对象就能够被程序使用。软引用可用来实现内存敏感的快速缓存。
+
+
 
 
 ### 反射的底层原理
+
+```java
+    String a="abc";
+    Method method = String.class.getDeclaredMethod("equals",Object.class);
+    System.out.println(method.invoke(a, "abc"));
+```
+
+
+```java
+public final class Class<T> implements java.io.Serializable,
+                              GenericDeclaration,
+                              Type,
+                              AnnotatedElement {
+
+    private volatile transient SoftReference<ReflectionData<T>> reflectionData;
+    /**
+     * 返回对应方法，name为名称，papameterTypes为参数
+     * Java 中名称和参数列表区分函数，JVM则包含返回值
+     */
+    @CallerSensitive
+    public Method getDeclaredMethod(String name, Class<?>... parameterTypes)
+        throws NoSuchMethodException, SecurityException {
+        checkMemberAccess(Member.DECLARED, Reflection.getCallerClass(), true);
+        //得到所有的方法，在其中搜索，返回        
+        Method method = searchMethods(privateGetDeclaredMethods(false), name, parameterTypes);
+        if (method == null) {
+            throw new NoSuchMethodException(getName() + "." + name + argumentTypesToString(parameterTypes));
+        }
+        return method;
+    }
+
+    /**
+     * 返回一个根方法数据对象
+     */
+    private Method[] privateGetDeclaredMethods(boolean publicOnly){
+        checkInitted();
+        Method[] res;
+        // 获取缓存数据
+        ReflectionData<T> rd = reflectionData();
+        if (rd != null) {
+            res = publicOnly ? rd.declaredPublicMethods : rd.declaredMethods;
+            if (res != null) return res;
+        }
+        // 没有缓存数据可用；getDeclaredMethods0 到JVM中请求数据
+        res = Reflection.filterMethods(this, getDeclaredMethods0(publicOnly));
+        if (rd != null) {
+            if (publicOnly) {
+                rd.declaredPublicMethods = res;
+            } else {
+                rd.declaredMethods = res;
+            }
+        }
+        return res;
+    }
+
+    // 懒创建和 缓存 ReflectionData 
+    private ReflectionData<T> reflectionData() {
+        // 这里是一个软引用,get()可能为空
+        SoftReference<ReflectionData<T>> reflectionData = this.reflectionData;
+        int classRedefinedCount = this.classRedefinedCount;
+        ReflectionData<T> rd;
+        if (useCaches &&
+            reflectionData != null &&
+            (rd = reflectionData.get()) != null &&
+            rd.redefinedCount == classRedefinedCount) {
+            return rd;
+        }
+        // else no SoftReference or cleared SoftReference or stale ReflectionData
+        // -> create and replace new instance
+        return newReflectionData(reflectionData, classRedefinedCount);
+    }
+
+    // 反射数据存储结构
+    private static class ReflectionData<T> {
+        volatile Field[] declaredFields;
+        volatile Field[] publicFields;
+        volatile Method[] declaredMethods;
+        volatile Method[] publicMethods;
+        volatile Constructor<T>[] declaredConstructors;
+        volatile Constructor<T>[] publicConstructors;
+        // Intermediate results for getFields and getMethods
+        volatile Field[] declaredPublicFields;
+        volatile Method[] declaredPublicMethods;
+        volatile Class<?>[] interfaces;
+
+        // Value of classRedefinedCount when we created this ReflectionData instance
+        final int redefinedCount;
+
+        ReflectionData(int redefinedCount) {
+            this.redefinedCount = redefinedCount;
+        }
+    }
+```
+
+这里使用ReflectionData 来缓存从JVM拿到的反射信息， reflectionData 是软引用，有可能为空。reflectionData 方法先从缓存拿数据，拿不到就创建一个。
+
+transient： 不参与序列化
 
 
 
@@ -24,10 +128,24 @@ The API accommodates applications that need access to either the public members 
 + 在`运行时`判断任意一个类所具有的成员变量和方法（包括private）；
 
 
-### 反射的常见用途：
+
+
+
+
+
+
+
+### 反射的常见用途
 
 + 在IDEA中编码，输入对象后按. IDEA会给提示属性和方法列表。
 + 在Spring，我们在配置文件中配置类的全路径，Spring 就会自动帮我们生成bean
+
+
+
+
+
+
+
 
 ### 反射的运用
 
@@ -42,7 +160,7 @@ Class.forName("com.mysql.jdbc.Driver");
 2. 调用某个Class的class属性来获取该类对应的Class对象。
 
 ```java
-Class<?> klass=Person.class;
+Class<?> oop=Person.class;
 Class<?> classInt = Integer.TYPE;
 ```
 3. 调用某个对象的 getClass() 方法，比如:
@@ -168,3 +286,5 @@ public Object invoke(Object obj, Object... args)
 参考：
 + [Java Reflection - Private Fields and Methods](http://tutorials.jenkov.com/java-reflection/private-fields-and-methods.html)
 + [【译】7. Java反射——私有字段和私有方法](https://www.cnblogs.com/penghongwei/p/3300084.html)
+
+

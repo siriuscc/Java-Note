@@ -15,11 +15,6 @@ String的相关问题
 
 不能被继承，他是 public final class
 
-## String 在内存的存储图示
-
-String a = New string ("a");在jvm中如何存储？
-
-![](.images/java.note/2019-03-01-21-13-14.png)
 
 ## StringBuffer and StringBuilder
 

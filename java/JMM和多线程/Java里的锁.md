@@ -114,7 +114,59 @@ Unsafe类提供了以下这些功能：
 		- 每次修改都必须立即写入主内存
 * 禁止指令重排序
 
-+ volatile不等于线程安全
+### volatile 不等于线程安全
+    
+在各个线程的工作内存中，volatile变量也可以存在不一致的情况，但由于每次使用之前都要先刷新，执行引擎看不到不一致的情况，因此可以认为不存在一致性问题。
+
+Java里的运算并非原子操作，导致volatile变量的运算在并发下一样是不安全的。
+```java
+public class VolatileDemo {
+    private static volatile int count = 0;
+
+    public static void main(String[] args) {
+
+        Thread[] ts = new Thread[20];
+        for (int i = 0; i < 20; ++i) {
+            ts[i] = new Thread(() ->
+            {
+                for (int k = 0; k < 100; ++k) {
+                    //问题出在这里，increase()不是原子操作
+                    count++;
+                }
+            });
+            ts[i].start();
+        }
+
+        while (Thread.activeCount() > 1) {
+            Thread.yield();
+        }
+        //多次运行，count<=2000
+        System.out.println("count=" + count);
+    }
+}
+```
+
+```bash
+# Java 的 计算不是原子的
+increase():
+    getStatic   # 获取静态域，推入栈顶
+    iconst_1    # 常数 1 入栈
+    iadd        # 栈顶int相加，结果在栈顶
+    putStatic   # 写到类静态域  
+```
+
+
+当getStatic时，能保证此时变量是正确的，但是在执行iconst_1,iadd的过程，有可能其他线程往主内存修改了count变量，导致本线程下次putStatic又覆盖了其他线程的修改，造成其他线程的操作丢失；线程不安全；
+
+
+这里有点意思的是，volatile+CAS可以实现原子操作；
+volatile能保证可见性，也就是每次读到的都是最新的数据；CAS能保证每次写入都等价于没有中间状态。
+
+
+
+
+
+
 
 
 ### volatile实战：线程安全的单例
