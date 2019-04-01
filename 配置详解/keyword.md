@@ -61,7 +61,8 @@ ctrl+o 查看当前类的属性及方法，按两次显示父类属性方法
 
 Shift+Alt+F 代码格式化
 ctrl+shift+f 全局搜索
-
+alt+left 后退
+alt+right 前进
 
 
 禁用win10，ALT+SHIFT+左 
