@@ -1,6 +1,6 @@
+[TOC]
 
-
-##### 强制： 用户传入的任何参数都必须做有效性校验
+### 强制： 用户传入的任何参数都必须做有效性校验
 
 说明：忽略参数校验可能导致：
 
@@ -16,7 +16,7 @@
 
 
 
-##### URL 的特殊字符
+### URL 的特殊字符
 
 
 当几种特定的字符集合出现在URL中时，必须特别注意：
@@ -52,81 +52,6 @@
 ```
 
 控制字符是不可打印的US-ASCII字符(十六进制00~1F及7F)如果使用,请转义处理.有些字符#(哈希)和%(百分比)在URL上下文中有着特殊含义,你可以把它们当作保留字符对待.这个集合中的其它字符无法被打印,因此对它们进行转义是唯一的表示方式, < > " 这三个字符需要被转义，因为这些字符通常用来在文本中分隔URL
-
-
-
-##### url
-
-
-[关于Url编码](http://doiob.blog.163.com/blog/static/175757412201011291023290/)
-
-```
-常见URL格式：
-<scheme>://<username>:<password>@<host>:<port>/<path>?<query>#<fragment >
-
-```
-
-http://username:password@www.baidu.com:80/search?params=hello
-
-
-
-###### scheme
-
-scheme: 一般用来标明协议，scheme为一部分,//不属于分隔符的一部分,是URL下一部分的开始.
-
-
-scheme可以是官方注册的(http,https)，也可以是非官方的（sftp,svn）常用协议对应默认端口：
-
-|scheme	|port
-|:-:|:-:|
-|ftp	|21
-|http	|80
-|https	|443
-|ws 	|80
-|wss   	|443
-
-
-
-目前手机上点击链接就可以跳转到app的实现方式就是scheme:
-
-
-微信 [weixin://](weixin://)
-发起群聊[weixin://dl/groupchat]
-添加好友[weixin://dl/add](weixin://dl/add)
-扫一扫[weixin://dl.shopping](weixin://dl/shopping)
-支付宝 [alipay://](alipay://)
-
-
-###### host:
-
-主机地址可以是域名或IP地址。host主要是用来找到服务器地址。domain可以解析为ip。解析的顺序是:
-
-1. 查看本地host文件是否存在对应条目
-2. 查看本地dns缓存是否存在对应条目
-3. 查看系统配置的远程dns服务器是否有对应条目
-
-//TODO dns解析详解
-
-
-
-###### port
-
-端口，用于在服务器上找到对应的服务。范围是 $0 - 2^{16}$(65535)；其中知名端口：1～1023。
-
-
-
-
-
-###### path
-
-用"/"分隔，标明资源地址。
-
-
-###### fragment 
-
-一般作为锚点。 如 #a,这种用法
-
-
 
 
 

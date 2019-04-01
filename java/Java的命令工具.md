@@ -10,13 +10,21 @@ output: pdf_document
 
 
 
-### 打印java 进程号:jps
+### Java 线程状态转换
+
+
+
+
+
+
+
+## 打印java 进程号:jps
 
 > jps
 
 
 
-### 打印内存使用情况:jmap
+## 打印内存使用情况:jmap
 jmap -heap 14296
 打印内存数据，包括内存数据的设置和实际使用情况
 
@@ -72,7 +80,7 @@ PS Old Generation
 
 
 
-### 查看JVM堆中对象详细占用情况:jmap -histo
+## 查看JVM堆中对象详细占用情况:jmap -histo
 
 jmap -histo [pid]
 
@@ -88,7 +96,7 @@ jmap -histo [pid]
 ```
 
 
-### dump 出堆信息jmap -dump
+## dump 出堆信息jmap -dump
 
 ```
 
@@ -105,7 +113,7 @@ jmap -histo [pid]
 
 
 
-### 打印栈信息
+## 打印栈信息
 
 ```
 jstack -l PID
@@ -113,7 +121,7 @@ jstack -l PID
 
 
 
-#### 等待IO
+### 等待IO
 
 这是一个等待输入的程序的栈信息：
 
@@ -188,7 +196,7 @@ jstack -l PID
 
 
 
-#### 死循环
+### 死循环
 
 写一个死循环并在main调用：
 
@@ -238,7 +246,7 @@ jstack -l PID
 
 
 
-#### wait等待唤醒
+### wait等待唤醒
 
 
 ```java
@@ -281,7 +289,7 @@ jstack -l PID
 
 
 
-#### 死锁
+### 死锁
 
 ```java
 public static void deadLockTest() {
@@ -414,15 +422,7 @@ Found 1 deadlock.
 
 
 
-#### Java 线程状态转换
-
-![](.images/Java的命令工具/2019-03-01-20-12-16.png)
-
-
-
-
-
-#### 代码参考：
+### 代码参考
 
 ```java{.line-numbers}
 class CmdTest {
