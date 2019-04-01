@@ -1,10 +1,6 @@
 [TOC]
 
-
-
-
 private修饰的方法可以通过反射访问，那么private的意义是什么
-
 
 + private 并不是强制约束，他只是常规使用java的约束，并不是为了绝对隔离而设计的；
 + 从外部调用时，更提供清晰的外部视图，对外屏蔽私有变量；
@@ -18,83 +14,6 @@ Java类初始化顺序：
 4. 派生类 非静态代码块 和变量赋值语句
 5. 基类构造函数
 6. 派生类构造函数
-
-
-
-
-## Java异常继承体系：
-
-+ Throwable
-	+ Error:致命异常，程序无法处理，如OutOfMemoryError
-	+ Exception
-		+ checked:受检异常，
-		+ unchecked:RuntimeException,不需要显式catch
-			
-Exception 分为：checked和unchecked
-
-
-### try-catch
-
-
-如果finally 是在执行完return之后，这时return 的值是被暂存了的；
-
-```java {.line-numbers}
-
- public int finallyNotWork(){
-        int temp=100;
-        try{
-            throw new Exception("a exp");
-        }catch (Exception e){
-            // 返回值被暂存
-            return temp;
-        }finally {
-            // 这里影响不到返回值
-            temp=1;
-        }
-    }
-    //方法的返回值为100
-```
-
-
-
-
-
-### 千万不要在finally里return
-
-
-```java
-
-    static int a=1;
-    static int b=10;
-    static int c=100;
-    @Test
-    public void finallyReturnTest(){
-
-        System.out.println(finallyReturn());
-        System.out.println("a:"+a);
-        System.out.println("b:"+b);
-        System.out.println("c:"+c);
-    }
-    public static int finallyReturn(){
-        try{
-            //do something
-            return ++a;
-        }catch (Exception e){
-            return ++b;
-        }finally {
-            return ++c;
-        }
-    }
-```
-
-
-如果没抛异常，a=2,b=10,c=101,路径a-c
-如果a抛异常,a=1,b=11,c=101
-这里根本的原因是开发者用finally 写了业务逻辑；
-
-
-
-
 
 
 ## 重载和重写
