@@ -39,3 +39,5 @@ public class IHaveNatives
 怎么写一个JNI:
 
 https://www.cnblogs.com/HDK2016/p/7226840.html?utm_source=itdadao&utm_medium=referral
+
+
