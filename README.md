@@ -43,6 +43,8 @@
 + [阿里龙井JDK](https://github.com/alibaba/dragonwell8)
 
 
+[architecture.taobao-alibaba](https://github.com/davideuler/architecture.taobao-alibaba)
+
 
 ### 社区
 

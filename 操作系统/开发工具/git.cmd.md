@@ -67,6 +67,26 @@ git remote add origin https://github.com/siriuscc/aaa.git
 git push -u origin master
 ```
 
+如果远程仓库创建后顺便生成了readme.md，会出现：
+
+```
+To https://github.com/siriuscc/JavaProject.git
+ ! [rejected]        master -> master (non-fast-forward)
+error: failed to push some refs to 'https://github.com/siriuscc/JavaProject.git'
+hint: Updates were rejected because the tip of your current branch is behind
+hint: its remote counterpart. Integrate the remote changes (e.g.
+hint: 'git pull ...') before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+
+```
+需要pull一下：
+
+```
+git pull --rebase origin master
+```
+
+
+
 
 ### 合并分支：
 
@@ -74,9 +94,6 @@ git push -u origin master
 git checkout master	# 切换到主分支
 git merge hotfix	# 将 hotfix分支合并到主分支上
 ```
-
-
-
 
 
 ```bash
@@ -122,7 +139,34 @@ git push
 ```
 
 
+merge 和rebase 的区别
 
+1. 假如有三次提交A,B,C，然后在C checkout 一个mywork
+![](.images/git.cmd/2019-04-05-18-34-29.png)
+
+2. 在远程分支origin的基础上创建一个名为"mywork"的分支并提交了，同时有其他人在"origin"上做了一些修改并提交了。
+
+![](.images/git.cmd/2019-04-05-18-35-36.png)
+
+
+
+
+checkout mywork
+merge origin
+
+![](.images/git.cmd/2019-04-05-20-26-00.png)
+用git pull命令把"origin"分支上的修改pull下来与本地提交合并（merge）成版本M，但这样会形成图中的菱形，让人很困惑。
+
+
+
+git pull --rebase 
+
+创建一个新的提交R，R的文件内容和上面M的一样，但我们将E提交废除，当它不存在（图中用虚线表示）。由于这种删除，小李不应该push其他的repository.rebase的好处是避免了菱形的产生，保持提交曲线为直线，让大家易于理解
+
+
+![](.images/git.cmd/2019-04-05-20-26-58.png)
+
+在rebase的过程中，有时也会有conflict，这时Git会停止rebase并让用户去解决冲突，解决完冲突后，用git add命令去更新这些内容，然后不用执行git-commit,直接执行git rebase --continue,这样git会继续apply余下的补丁。在任何时候，都可以用git rebase --abort参数来终止rebase的行动，并且mywork分支会回到rebase开始前的状态。
 
 
 #### down下线上代码版本,抛弃本地的修改
@@ -225,4 +269,19 @@ git push -u origin master 上面命令将本地的master分支推送到origin主
 
 
 
+
+查看git上个人代码量
+git log --author="username" --pretty=tformat: --numstat | awk '{ add += $1; subs += $2; loc += $1 - $2 } END { printf "added lines: %s, removed lines: %s, total lines: %s\n", add, subs, loc }' -
+
+统计每个人的增删行数
+git log --format='%aN' | sort -u | while read name; do echo -en "$name\t"; git log --author="$name" --pretty=tformat: --numstat | awk '{ add += $1; subs += $2; loc += $1 - $2 } END { printf "added lines: %s, removed lines: %s, total lines: %s\n", add, subs, loc }' -; done
+
+查看仓库提交者排名前 5
+git log --pretty='%aN' | sort | uniq -c | sort -k1 -n -r | head -n 5
+
+贡献者统计：
+git log --pretty='%aN' | sort -u | wc -l
+
+提交数统计：
+git log --oneline | wc -l
 

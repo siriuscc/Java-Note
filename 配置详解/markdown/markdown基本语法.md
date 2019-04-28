@@ -314,3 +314,52 @@ Markdown Preview Enhanced:Customize CSS
 }
 
 ```
+
+
+## 导入文件
+
+
+
+@import "你的文件"
+
+就可以了，很简单对吧～ d(`･∀･)b
+
+<!-- @import "your_file" --> 的写法也是支持的。
+
+
+支持的文件类型
+.jpeg(.jpg), .gif, .png, .apng, .svg, .bmp 文件将会直接被当作 markdown 图片被引用。
+.csv 文件将会被转换成 markdown 表格。
+.mermaid 将会被 mermaid 渲染。
+.dot 文件将会被 viz.js (graphviz) 渲染。
+.plantuml(.puml) 文件将会被 PlantUML 渲染。
+.html 将会直接被引入。
+.js 将会被引用为 <script src="你的 js 文件"></script>。
+.less 和 .css 将会被引用为 style。目前 less 只支持本地文件。.css 文件将会被引用为 <link rel="stylesheet" href="你的 css 文件">。
+.pdf 文件将会被 pdf2svg 转换为 svg 然后被引用。
+markdown 将会被分析处理然后被引用。
+其他所有的文件都将被视为代码块。
+
+
+
+设置图片
+```
+@import "test.png" {width="300px" height="200px" title="图片的标题" alt="我的 alt"}
+```
+
+引用外部文件
+```
+@import "https://raw.githubusercontent.com/shd101wyy/markdown-preview-enhanced/master/LICENSE.md"
+```
+
+As（作为）代码块
+```
+@import "test.json" {as="vega-lite"}
+
+```
+
+
+引用文件作为 Code Chunk
+```
+@import "test.py" {cmd="python3"}
+```
