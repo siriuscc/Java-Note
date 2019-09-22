@@ -4,7 +4,6 @@
 服务器：Centos
 
 
-
 + 下载redis
 + 解压
 + 到目录下make

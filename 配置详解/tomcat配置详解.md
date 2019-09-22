@@ -224,15 +224,6 @@ http://localhost:8080/manager/remove?path=/examples
 
 
 
-
-考虑一下，其实没有必要热部署，
-或者，以后localhost拿来做热部署测试
-
-项目的正式运行环境还是手动上传上去
-
-
-
-
 在conf/server.xml 中配置多host
 
 ```xml
@@ -250,54 +241,6 @@ http://localhost:8080/manager/remove?path=/examples
 ```
 
 注:这里path 会影响到${pageContext.request.contextPath}，如果是根目录，应该写""，而不是"/"
-
-
-
-
-
-
-然后是看一下数据库的情况
-
-需要把大题小作的库重建
-
-
-重建完成后，修改eclipse中数据库地址的配置
-
-在本地运行一下项目，看看能不能跑起来先
-
-
-
-
-
-很绝望，改个目录都卡死，那就换个方法，直接去上面拉一个项目下来好了
-
-安装小乌龟
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

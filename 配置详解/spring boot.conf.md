@@ -110,7 +110,7 @@ Mustache
 ```
 
 application.properties  配置
-```properties {.line-numbers}
+```yml {.line-numbers}
 
 # THYMELEAF (ThymeleafAutoConfiguration)
 #开启模板缓存（默认值：true）
