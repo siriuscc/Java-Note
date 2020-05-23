@@ -285,3 +285,9 @@ git log --pretty='%aN' | sort -u | wc -l
 提交数统计：
 git log --oneline | wc -l
 
+ssh-copy-id gitadmin@host   --上传公钥，远程主机host为服务器IP
+
+
+显示中文：
+
+git config  --global core.quotepath false

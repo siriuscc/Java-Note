@@ -1,6 +1,7 @@
 *.log
 **/.vs
 **/.vscode
+assets/
 /review
 **/.s.md
 **/.assets/*.png
